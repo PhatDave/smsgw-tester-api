@@ -112,6 +112,7 @@ class SessionStatus {
 }
 
 class Session {
+	// TODO: Create hash based on url, username and password
 	auto_enquire_link_period = 500;
 	eventEmitter = new EventEmitter();
 
@@ -243,18 +244,21 @@ class Session {
 	}
 
 	send(source, destination, message) {
-		if (this.status !== SessionStatus.BOUND) {
-			this.logger.log1(`Cannot send message, not bound to ${this.url}`);
-			return;
-		}
-		this.logger.log1(`Sending message from ${source} to ${destination} with message ${message}`);
-		this.session.submit_sm({
-			                       source_addr: source,
-			                       destination_addr: destination,
-			                       short_message: message
-		                       }, pdu => {
+		return new Promise((resolve, reject) => {
+			if (this.status !== SessionStatus.BOUND) {
+				this.logger.log1(`Cannot send message, not bound to ${this.url}`);
+				reject(`Cannot send message, not bound to ${this.url}`);
+				return;
+			}
+			this.logger.log1(`Sending message from ${source} to ${destination} with message ${message}`);
+			this.session.submit_sm({
+				                       source_addr: source,
+				                       destination_addr: destination,
+				                       short_message: message
+			                       }, pdu => {
+				resolve(pdu);
+			});
 		});
-		this.session.close();
 	}
 
 	close() {
@@ -287,7 +291,8 @@ class Session {
 }
 
 class SessionManager {
-	// TODO: Also enable session deletion (not just disconnection)
+	// TODO: Somehow write the sessions to a file on disk, so that they can be restored on server restart
+	// And on startup read the file and restore the sessions
 	sessionIdCounter = 0;
 	logger = new Logger("SessionManager");
 
@@ -305,6 +310,15 @@ class SessionManager {
 	addSession(session) {
 		this.logger.log1(`Adding session with ID ${session.id}`);
 		this.sessions.push(session);
+	}
+
+	deleteSession(session) {
+		this.logger.log1(`Deleting session with ID ${session.id}`);
+		if (session.status === SessionStatus.BOUND || session.status === SessionStatus.CONNECTED) {
+			session.close();
+		}
+		delete this.sessions[this.sessions.indexOf(session)];
+		this.sessions = this.sessions.filter(Boolean);
 	}
 
 	getSession(id) {
@@ -333,6 +347,7 @@ class HTTPServer {
 		app.post('/api/sessions/:id/bind', this.bind.bind(this));
 		app.post('/api/sessions/:id/connect', this.connect.bind(this));
 		app.delete('/api/sessions/:id/connect', this.disconnect.bind(this));
+		app.delete('/api/sessions/:id', this.deleteSession.bind(this));
 
 		this.server = app.listen(SERVER_PORT, function() {
 			this.logger.log1(`HTTPServer listening at http://localhost:${SERVER_PORT}`)
@@ -345,6 +360,7 @@ class HTTPServer {
 	}
 
 	createSession(req, res) {
+		// TODO: Check for existing session
 		this.logger.log1("Creating session");
 		let session = sessionManager.createSession(req.body.url, req.body.username, req.body.password);
 		res.send(JSON.stringify(session.serialize()));
@@ -364,11 +380,15 @@ class HTTPServer {
 
 	send(req, res) {
 		let session = sessionManager.getSession(req.params.id);
+		let source = req.body.source;
+		let destination = req.body.destination;
+		let message = req.body.message;
 		this.logger.log1(
-			`Sending message from ${req.body.source} to ${req.body.destination} with message ${req.body.message} on session with ID ${req.params.id}`)
+			`Sending message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
 		if (session) {
-			session.send(req.body.source, req.body.destination, req.body.message);
-			res.send(JSON.stringify(session.serialize()));
+			session.send(source, destination, message)
+				.then(pdu => res.send(JSON.stringify(pdu)))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
 			res.status(404).send();
@@ -380,7 +400,8 @@ class HTTPServer {
 		// Maybe make this async?
 		let session = sessionManager.getSession(req.params.id);
 		if (session) {
-			session.bind().then(() => res.send(JSON.stringify(session.serialize())))
+			session.bind()
+				.then(() => res.send(JSON.stringify(session.serialize())))
 				.catch(err => res.status(400).send(JSON.stringify(err)));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
@@ -392,7 +413,8 @@ class HTTPServer {
 		this.logger.log1(`Connecting session with ID ${req.params.id}`)
 		let session = sessionManager.getSession(req.params.id);
 		if (session) {
-			session.connect().then(() => res.send(JSON.stringify(session.serialize())))
+			session.connect()
+				.then(() => res.send(JSON.stringify(session.serialize())))
 				.catch(err => res.status(400).send(JSON.stringify(err)));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
@@ -404,8 +426,21 @@ class HTTPServer {
 		this.logger.log1(`Disconnecting session with ID ${req.params.id}`)
 		let session = sessionManager.getSession(req.params.id);
 		if (session) {
-			session.close().then(() => res.send(JSON.stringify(session.serialize())))
+			session.close()
+				.then(() => res.send(JSON.stringify(session.serialize())))
 				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	deleteSession(req, res) {
+		this.logger.log1(`Deleting session with ID ${req.params.id}`);
+		let session = sessionManager.getSession(req.params.id);
+		if (session) {
+			sessionManager.deleteSession(session);
+			res.send();
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
 			res.status(404).send();
@@ -484,14 +519,8 @@ class WSServer {
 	}
 }
 
-function sleep(ms) {
-	return new Promise((resolve) => {
-		setTimeout(resolve, ms);
-	});
-}
-
 let sessionManager = new SessionManager();
 let session = sessionManager.createSession('localhost:7001', 'test', 'test');
-session.connect();
+session.connect().then(() => session.bind());
 new WSServer();
 new HTTPServer();
