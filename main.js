@@ -263,14 +263,12 @@ class Session {
 	}
 
 	sendOnInterval(source, destination, message, interval, count) {
-		// TODO: Create method for stopping sending messages
 		return new Promise((resolve, reject) => {
 			if (!this.canSend() || this.busy) {
 				this.logger.log1(`Cannot send many message, not bound to ${this.url} or busy`);
 				reject(`Cannot send many message, not bound to ${this.url} or busy`);
 				return;
 			}
-			// TODO: Remember to update busy when cancelling the timer
 			// TODO: Create event for counter update
 			this.busy = true;
 			this.timer = new NanoTimer();
@@ -287,6 +285,14 @@ class Session {
 			}, '', `${interval} s`);
 			resolve();
 		});
+	}
+
+	cancelSendInterval() {
+		if (!!this.timer) {
+			this.timer.clearInterval()
+			this.timer = null;
+		}
+		this.busy = false;
 	}
 
 	close() {
@@ -399,6 +405,7 @@ class HTTPServer {
 		app.get('/api/sessions/:id', this.getById.bind(this));
 		app.post('/api/sessions/:id/send', this.send.bind(this));
 		app.post('/api/sessions/:id/sendMany', this.sendMany.bind(this));
+		app.delete('/api/sessions/:id/sendMany', this.cancelSendMany.bind(this));
 		app.post('/api/sessions/:id/bind', this.bind.bind(this));
 		app.post('/api/sessions/:id/connect', this.connect.bind(this));
 		app.delete('/api/sessions/:id/connect', this.disconnect.bind(this));
@@ -408,6 +415,8 @@ class HTTPServer {
 			this.logger.log1(`HTTPServer listening at http://localhost:${SERVER_PORT}`)
 		}.bind(this));
 	}
+
+	// TODO: These requests deserve error handling
 
 	getSessions(req, res) {
 		this.logger.log1("Getting sessions");
@@ -449,7 +458,6 @@ class HTTPServer {
 	}
 
 	sendMany(req, res) {
-		// TODO: These requests deserve error handling
 		let session = sessionManager.getSession(req.params.id);
 		let source = req.body.source;
 		let destination = req.body.destination;
@@ -472,6 +480,25 @@ class HTTPServer {
 		}
 	}
 
+	cancelSendMany(req, res) {
+		let session = sessionManager.getSession(req.params.id);
+		if (!session.busy) {
+			res.status(400).send({
+				                     err: true,
+				                     msg: `Session with ID ${req.params.id} is not sending messages`
+			                     });
+			return;
+		}
+		this.logger.log1(`Cancelling send timer for session with ID ${req.params.id}`);
+		if (session) {
+			session.cancelSendInterval();
+			res.send();
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
 	bind(req, res) {
 		this.logger.log1(`Binding session with ID ${req.params.id}`)
 		// Maybe make this async?
@@ -479,7 +506,7 @@ class HTTPServer {
 		if (session) {
 			session.bind()
 				.then(() => res.send(JSON.stringify(session.serialize())))
-				.catch(err => res.status(400).send(JSON.stringify(err)));
+				.catch(err => res.status(400).send());
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
 			res.status(404).send();
@@ -492,7 +519,10 @@ class HTTPServer {
 		if (session) {
 			session.connect()
 				.then(() => res.send(JSON.stringify(session.serialize())))
-				.catch(err => res.status(400).send(JSON.stringify(err)));
+				.catch(err => res.status(400).send({
+					                                   err: true,
+					                                   msg: err.message
+				                                   }));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
 			res.status(404).send();
@@ -505,7 +535,10 @@ class HTTPServer {
 		if (session) {
 			session.close()
 				.then(() => res.send(JSON.stringify(session.serialize())))
-				.catch(err => res.status(400).send(JSON.stringify(err)));
+				.catch(err => res.status(400).send({
+					                                   err: true,
+					                                   msg: err.message
+				                                   }));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
 			res.status(404).send();
