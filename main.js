@@ -98,15 +98,15 @@ class Logger {
 let logger = new Logger("main");
 
 class SessionStatus {
-	static OK = 0;
-	static CONNECTING = 1;
-	static CONNECTED = 2;
-	static BINDING = 3;
-	static BOUND = 4;
-	static READY = 5;
-	static CONNECT_FAILED = -1;
-	static BIND_FAILED = -2;
-	static NOT_CONNECTED = -3;
+	static OK = "OK";
+	static CONNECTING = "CONNECTING";
+	static CONNECTED = "CONNECTED";
+	static BINDING = "BINDING";
+	static BOUND = "BOUND";
+	static READY = "READY";
+	static CONNECT_FAILED = "CONNECT_FAILED";
+	static BIND_FAILED = "BIND_FAILED";
+	static NOT_CONNECTED = "NOT_CONNECTED";
 }
 
 class Session {
@@ -114,6 +114,11 @@ class Session {
 	eventEmitter = new EventEmitter();
 
 	connectingPromise = {
+		promise: null,
+		resolve: null,
+		reject: null
+	}
+	disconnectingPromise = {
 		promise: null,
 		resolve: null,
 		reject: null
@@ -146,6 +151,7 @@ class Session {
 		this.connectingPromise.promise = new Promise((resolve, reject) => {
 			if (this.status !== SessionStatus.NOT_CONNECTED) {
 				this.logger.log1("Session already connected");
+				reject("Session already connected");
 				return;
 			}
 			this.logger.log1("Connecting to " + this.url);
@@ -190,11 +196,13 @@ class Session {
 	}
 
 	bind() {
-		if (this.status !== SessionStatus.CONNECTED) {
-			this.logger.log1(`Cannot bind, not connected to ${this.url}`);
-			return;
-		}
 		this.bindingPromise.promise = new Promise((resolve, reject) => {
+			if (this.status !== SessionStatus.CONNECTED) {
+				this.logger.log1(`Cannot bind, not connected to ${this.url}`);
+				reject(`Cannot bind, not connected to ${this.url}`);
+				return;
+			}
+
 			this.logger.log1("Trying to bind to " + this.url)
 			if (this.status !== SessionStatus.CONNECTED) {
 				this.logger.log1(`Cannot bind, not connected to ${this.url}`);
@@ -246,8 +254,16 @@ class Session {
 	}
 
 	close() {
-		this.session.close();
-		this.setStatus(SessionStatus.NOT_CONNECTED);
+		this.disconnectingPromise.promise = new Promise((resolve, reject) => {
+			if (this.status !== SessionStatus.BOUND) {
+				this.logger.log1(`Cannot close session, not bound to ${this.url}`);
+				reject(`Cannot close session, not bound to ${this.url}`);
+				return;
+			}
+			this.session.close();
+			this.setStatus(SessionStatus.NOT_CONNECTED);
+			resolve();
+		});
 	}
 
 	on(event, callback) {
@@ -259,7 +275,8 @@ class Session {
 			id: this.id,
 			url: this.url,
 			username: this.username,
-			password: this.password
+			password: this.password,
+			status: this.status
 		}
 	}
 }
@@ -273,14 +290,14 @@ class SessionManager {
 	}
 
 	createSession(url, username, password) {
-		logger.log1(`Creating session to ${url} with username ${username} and password ${password}`);
+		this.logger.log1(`Creating session to ${url} with username ${username} and password ${password}`);
 		let session = new Session(this.sessionIdCounter++, url, username, password);
 		this.addSession(session);
 		return session;
 	}
 
 	addSession(session) {
-		logger.log1(`Adding session with ID ${session.id}`);
+		this.logger.log1(`Adding session with ID ${session.id}`);
 		this.sessions.push(session);
 	}
 
@@ -290,7 +307,7 @@ class SessionManager {
 
 	getSession(id) {
 		return this.sessions.find((session) => {
-			return session.id === id;
+			return session.id == id;
 		});
 	}
 
@@ -298,6 +315,99 @@ class SessionManager {
 		return this.sessions.map((session) => {
 			return session.serialize();
 		});
+	}
+}
+
+class HTTPServer {
+	logger = new Logger("HTTPServer");
+
+	constructor() {
+		app.use(bodyParser.json());
+
+		app.get('/api/sessions', this.getSessions.bind(this));
+		app.post('/api/sessions', this.createSession.bind(this));
+		app.get('/api/sessions/:id', this.getById.bind(this));
+		app.post('/api/sessions/:id/send', this.send.bind(this));
+		app.post('/api/sessions/:id/bind', this.bind.bind(this));
+		app.post('/api/sessions/:id/connect', this.connect.bind(this));
+		app.delete('/api/sessions/:id/connect', this.disconnect.bind(this));
+
+		this.server = app.listen(SERVER_PORT, function() {
+			this.logger.log1(`HTTPServer listening at http://localhost:${SERVER_PORT}`)
+		}.bind(this));
+	}
+
+	getSessions(req, res) {
+		this.logger.log1("Getting sessions");
+		res.send(JSON.stringify(sessionManager.serialize()));
+	}
+
+	createSession(req, res) {
+		this.logger.log1("Creating session");
+		let session = sessionManager.createSession(req.body.url, req.body.username, req.body.password);
+		res.send(JSON.stringify(session.serialize()));
+	}
+
+	getById(req, res) {
+		let session = sessionManager.getSession(req.params.id);
+		this.logger.log1(`Getting session by ID ${req.params.id}`);
+		if (session) {
+			this.logger.log1(`Session found with ID ${req.params.id}`)
+			res.send(JSON.stringify(session.serialize()));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	send(req, res) {
+		let session = sessionManager.getSession(req.params.id);
+		this.logger.log1(
+			`Sending message from ${req.body.source} to ${req.body.destination} with message ${req.body.message} on session with ID ${req.params.id}`)
+		if (session) {
+			session.send(req.body.source, req.body.destination, req.body.message);
+			res.send(JSON.stringify(session.serialize()));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	bind(req, res) {
+		this.logger.log1(`Binding session with ID ${req.params.id}`)
+		// Maybe make this async?
+		let session = sessionManager.getSession(req.params.id);
+		if (session) {
+			session.bind().then(() => res.send(JSON.stringify(session.serialize())))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	connect(req, res) {
+		this.logger.log1(`Connecting session with ID ${req.params.id}`)
+		let session = sessionManager.getSession(req.params.id);
+		if (session) {
+			session.connect().then(() => res.send(JSON.stringify(session.serialize())))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	disconnect(req, res) {
+		this.logger.log1(`Disconnecting session with ID ${req.params.id}`)
+		let session = sessionManager.getSession(req.params.id);
+		if (session) {
+			session.close().then(() => res.send(JSON.stringify(session.serialize())))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
 	}
 }
 
@@ -316,35 +426,14 @@ session.on('statusChanged', (status) => {
 // 	logger.log1(pdu);
 // });
 
-session.connect().then(() => {
-	session.bind().catch(() => {
-		logger.log1("AAA");
-	})
-		.then(() => {
-			logger.log1("OK");
-			session.send("123", "456", "test");
-			sleep(600 * 1000);
-		});
-});
-
-class HTTPServer {
-	constructor() {
-		app.use(bodyParser.json());
-
-		app.get('/api/sessions', this.getSessions.bind(this));
-
-		this.server = app.listen(SERVER_PORT, function() {
-			const host = server.address().address
-			const port = server.address().port
-			logger.log1(`HTTPServerd listening at http://${host}:${port}`)
-		})
-	}
-
-	getSessions(req, res) {
-		let sessions = [];
-		for (let session of sessionManager.sessions) {
-			sessions.push(session.serialize());
-		}
-		res.send(sessions);
-	}
-}
+// session.connect().then(() => {
+// 	session.bind().catch(() => {
+// 		logger.log1("AAA");
+// 	})
+// 		.then(() => {
+// 			logger.log1("OK");
+// 			session.send("123", "456", "test");
+// 			sleep(600 * 1000);
+// 		});
+// });
+let httpServer = new HTTPServer();
