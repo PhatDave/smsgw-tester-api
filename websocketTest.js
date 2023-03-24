@@ -8,5 +8,5 @@ ws.on('open', () => {
 	ws.send(0);
 });
 ws.on('message', (data) => {
-	console.log(data);
+	console.log(String(data));
 });

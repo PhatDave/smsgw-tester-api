@@ -467,20 +467,21 @@ class WSServer {
 			if (index > -1) {
 				delete this.clients[sessionId][index];
 			}
+			this.clients[sessionId] = this.clients[sessionId].filter(Boolean);
 		}
 	}
 
-	onSessionChange(sessionId, session) {
+	onSessionChange(sessionId, newStatus) {
 		// TODO: Also maybe create a broadcast for any pdu
 		// To do this add ssomething to the client message maybe like sessionId:listenToPdu?
 		// So something like 0:1 or 0:true
 		// Then send any pdu updates to all clients with listen to true
 		this.logger.log1(`Session with ID ${sessionId} changed`);
-		if (this.clients[sessionId]) {
-			this.logger.log1(`Broadcasting session with ID ${sessionId} to ${this.clients[sessionId].length} clients`)
-			let value = session.serialize();
-			this.clients[sessionId].forEach(client => {
-				client.send(JSON.stringify(value));
+		let clients = this.clients[sessionId];
+		if (!!clients) {
+			this.logger.log1(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`)
+			clients.forEach(client => {
+				client.send(newStatus);
 			});
 		}
 	}
@@ -494,5 +495,6 @@ function sleep(ms) {
 
 let sessionManager = new SessionManager();
 let session = sessionManager.createSession('localhost:7001', 'test', 'test');
+// session.connect();
 new WSServer();
 new HTTPServer();
