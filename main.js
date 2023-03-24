@@ -259,7 +259,7 @@ class Session {
 
 	close() {
 		this.disconnectingPromise.promise = new Promise((resolve, reject) => {
-			if (this.status !== SessionStatus.BOUND) {
+			if (this.status !== SessionStatus.BOUND && this.status !== SessionStatus.CONNECTED) {
 				this.logger.log1(`Cannot close session, not bound to ${this.url}`);
 				reject(`Cannot close session, not bound to ${this.url}`);
 				return;
@@ -268,6 +268,7 @@ class Session {
 			this.setStatus(SessionStatus.NOT_CONNECTED);
 			resolve();
 		});
+		return this.disconnectingPromise.promise;
 	}
 
 	on(event, callback) {
@@ -413,10 +414,6 @@ class HTTPServer {
 }
 
 class WSServer {
-	// Have clients be grouped by session ID
-	// Any change on a session should be broadcasted to all clients in that session
-	// Clients make their session ID known by sending a message with the session ID
-	// It is possible to move clients by changing their session ID
 	clients = {};
 
 	constructor() {
@@ -495,6 +492,6 @@ function sleep(ms) {
 
 let sessionManager = new SessionManager();
 let session = sessionManager.createSession('localhost:7001', 'test', 'test');
-// session.connect();
+session.connect();
 new WSServer();
 new HTTPServer();
