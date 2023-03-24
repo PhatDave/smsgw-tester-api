@@ -2,12 +2,15 @@ const smpp = require("smpp");
 const keyboard = require("keyboardjs");
 const fs = require("fs");
 const path = require("path");
-const EventEmitter = require('events');
+const EventEmitter = require("events");
 
-const express = require('express');
+const express = require("express");
 const app = express();
-const bodyParser = require('body-parser');
-const WebSocket = require('ws');
+const bodyParser = require("body-parser");
+const WebSocket = require("ws");
+
+const crypto = require("crypto");
+
 
 const SERVER_PORT = process.env.SERVER_PORT || 8190;
 const WS_SERVER_PORT = process.env.WS_SERVER_PORT || 8191;
@@ -112,7 +115,6 @@ class SessionStatus {
 }
 
 class Session {
-	// TODO: Create hash based on url, username and password
 	auto_enquire_link_period = 500;
 	eventEmitter = new EventEmitter();
 
@@ -139,11 +141,10 @@ class Session {
 		this.id = id;
 		this.logger = new Logger(`Session-${this.id}`);
 		this.url = url;
+
 		this.username = username;
 		this.password = password;
-		if (!this.url.includes("smpp://")) {
-			this.url = "smpp://" + this.url;
-		}
+
 		this.logger.log1(`Session created with url ${this.url}, username ${this.username}, password ${this.password} and ID ${this.id}`);
 		this.status = SessionStatus.NOT_CONNECTED;
 	}
@@ -297,10 +298,15 @@ class SessionManager {
 	logger = new Logger("SessionManager");
 
 	constructor() {
-		this.sessions = [];
+		this.sessions = {};
 	}
 
 	createSession(url, username, password) {
+		let urlB64 = btoa(url);
+		if (this.sessions[urlB64]) {
+			this.logger.log1(`Session to ${url} already exists`);
+			return this.sessions[urlB64];
+		}
 		this.logger.log1(`Creating session to ${url} with username ${username} and password ${password}`);
 		let session = new Session(this.sessionIdCounter++, url, username, password);
 		this.addSession(session);
@@ -309,7 +315,7 @@ class SessionManager {
 
 	addSession(session) {
 		this.logger.log1(`Adding session with ID ${session.id}`);
-		this.sessions.push(session);
+		this.sessions[btoa(session.url)] = session;
 	}
 
 	deleteSession(session) {
@@ -317,18 +323,17 @@ class SessionManager {
 		if (session.status === SessionStatus.BOUND || session.status === SessionStatus.CONNECTED) {
 			session.close();
 		}
-		delete this.sessions[this.sessions.indexOf(session)];
-		this.sessions = this.sessions.filter(Boolean);
+		delete this.sessions[btoa(session.url)];
 	}
 
 	getSession(id) {
-		return this.sessions.find((session) => {
+		return Object.values(this.sessions).find((session) => {
 			return session.id == id;
 		});
 	}
 
 	serialize() {
-		return this.sessions.map((session) => {
+		return Object.values(this.sessions).map((session) => {
 			return session.serialize();
 		});
 	}
@@ -360,7 +365,6 @@ class HTTPServer {
 	}
 
 	createSession(req, res) {
-		// TODO: Check for existing session
 		this.logger.log1("Creating session");
 		let session = sessionManager.createSession(req.body.url, req.body.username, req.body.password);
 		res.send(JSON.stringify(session.serialize()));
@@ -383,8 +387,7 @@ class HTTPServer {
 		let source = req.body.source;
 		let destination = req.body.destination;
 		let message = req.body.message;
-		this.logger.log1(
-			`Sending message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
+		this.logger.log1(`Sending message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
 		if (session) {
 			session.send(source, destination, message)
 				.then(pdu => res.send(JSON.stringify(pdu)))
@@ -538,7 +541,7 @@ class WSServer {
 }
 
 let sessionManager = new SessionManager();
-let session = sessionManager.createSession('localhost:7001', 'test', 'test');
+let session = sessionManager.createSession('smpp://localhost:7001', 'test', 'test');
 session.connect().then(() => session.bind());
 new WSServer();
 new HTTPServer();
