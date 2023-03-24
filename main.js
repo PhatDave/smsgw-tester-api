@@ -7,8 +7,10 @@ const EventEmitter = require('events');
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
+const WebSocket = require('ws');
 
 const SERVER_PORT = process.env.SERVER_PORT || 8190;
+const WS_SERVER_PORT = process.env.WS_SERVER_PORT || 8191;
 
 
 [
@@ -411,6 +413,71 @@ class HTTPServer {
 	}
 }
 
+class WSServer {
+	// Have clients be grouped by session ID
+	// Any change on a session should be broadcasted to all clients in that session
+	// Clients make their session ID known by sending a message with the session ID
+	// It is possible to move clients by changing their session ID
+	clients = {};
+
+	constructor() {
+		this.server = new WebSocket.Server({port: WS_SERVER_PORT});
+		this.logger = new Logger("WSServer");
+		this.server.on('connection', this.onConnection.bind(this));
+		this.logger.log1(`WSServer listening at ws://localhost:${WS_SERVER_PORT}`);
+	}
+
+	onConnection(ws) {
+		this.logger.log1("New connection");
+		this.addClient(ws, -1);
+		ws.on('message', this.onMessage.bind(this, ws));
+		ws.on('close', this.onClose.bind(this, ws));
+	}
+
+	addClient(ws, sessionId) {
+		if (!this.clients[sessionId]) {
+			this.clients[sessionId] = [];
+		}
+		this.logger.log1(`Added client to session ID: ${sessionId}`);
+		this.clients[sessionId].push(ws);
+		this.logger.log1(`Now active ${this.clients[sessionId].length} clients in session ID: ${sessionId}`);
+	}
+
+	onMessage(ws, message) {
+		this.logger.log1("New message");
+		let sessionId = String(message);
+		this.logger.log1(`Moving client to session ID: ${sessionId}`);
+		this.removeClient(ws);
+		this.addClient(ws, sessionId);
+		this.logger.log1(`Now active ${this.clients[sessionId].length} clients in session ID: ${sessionId}`);
+	}
+
+	onClose(ws) {
+		this.removeClient(ws);
+		this.logger.log6(this.clients);
+		this.logger.log1("Connection closed");
+	}
+
+	removeClient(ws) {
+		for (let sessionId in this.clients) {
+			let index = this.clients[sessionId].indexOf(ws);
+			if (index > -1) {
+				delete this.clients[sessionId][index];
+			}
+		}
+		this.cleanClients();
+	}
+
+	cleanClients() {
+		for (let sessionId in this.clients) {
+			this.clients[sessionId] = this.clients[sessionId].filter(Boolean);
+			if (this.clients[sessionId].length === 0) {
+				delete this.clients[sessionId];
+			}
+		}
+	}
+}
+
 function sleep(ms) {
 	return new Promise((resolve) => {
 		setTimeout(resolve, ms);
@@ -436,4 +503,5 @@ session.on('statusChanged', (status) => {
 // 			sleep(600 * 1000);
 // 		});
 // });
-let httpServer = new HTTPServer();
+new WSServer();
+new HTTPServer();
