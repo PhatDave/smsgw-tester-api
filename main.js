@@ -9,11 +9,9 @@ const app = express();
 const bodyParser = require("body-parser");
 const WebSocket = require("ws");
 
-const crypto = require("crypto");
-
-
 const SERVER_PORT = process.env.SERVER_PORT || 8190;
 const WS_SERVER_PORT = process.env.WS_SERVER_PORT || 8191;
+const SESSIONS_FILE = process.env.SESSIONS_FILE || "sessions.json";
 
 
 [
@@ -292,13 +290,16 @@ class Session {
 }
 
 class SessionManager {
-	// TODO: Somehow write the sessions to a file on disk, so that they can be restored on server restart
-	// And on startup read the file and restore the sessions
 	sessionIdCounter = 0;
 	logger = new Logger("SessionManager");
 
 	constructor() {
 		this.sessions = {};
+		process.on('exit', this.cleanup.bind(this));
+		process.on('SIGINT', this.cleanup.bind(this));
+		process.on('SIGUSR1', this.cleanup.bind(this));
+		process.on('SIGUSR2', this.cleanup.bind(this));
+		process.on('uncaughtException', this.cleanup.bind(this));
 	}
 
 	createSession(url, username, password) {
@@ -336,6 +337,21 @@ class SessionManager {
 		return Object.values(this.sessions).map((session) => {
 			return session.serialize();
 		});
+	}
+
+	cleanup() {
+		this.logger.log1(`Saving sessions to ${SESSIONS_FILE}...`);
+		fs.writeFileSync(SESSIONS_FILE, JSON.stringify(this.serialize(), null, 4));
+		process.exit(0);
+	}
+
+	startup() {
+		let sessions = fs.readFileSync(SESSIONS_FILE);
+		sessions = JSON.parse(sessions);
+		this.logger.log1(`Loaded ${sessions.length} sessions from ${SESSIONS_FILE}...`);
+		sessions.forEach(session => {
+			this.createSession(session.url, session.username, session.password);
+		})
 	}
 }
 
@@ -541,7 +557,6 @@ class WSServer {
 }
 
 let sessionManager = new SessionManager();
-let session = sessionManager.createSession('smpp://localhost:7001', 'test', 'test');
-session.connect().then(() => session.bind());
+sessionManager.startup();
 new WSServer();
 new HTTPServer();
