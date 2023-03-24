@@ -131,6 +131,9 @@ class Session {
 		reject: null
 	}
 
+	static STATUS_CHANGED_EVENT = "statusChanged";
+	static ANY_PDU_EVENT = "*";
+
 	constructor(id, url, username, password) {
 		this.id = id;
 		this.logger = new Logger(`Session-${this.id}`);
@@ -146,7 +149,7 @@ class Session {
 
 	setStatus(newStatus) {
 		this.status = newStatus;
-		this.eventEmitter.emit("statusChanged", newStatus);
+		this.eventEmitter.emit(Session.STATUS_CHANGED_EVENT, newStatus);
 	}
 
 	connect() {
@@ -167,7 +170,7 @@ class Session {
 			} catch (e) {
 				this.logger.log1("Connection failed to " + this.url);
 				this.setStatus(SessionStatus.CONNECT_FAILED);
-				console.log(e);
+				reject("Connection failed to " + this.url);
 			}
 			this.connectingPromise.resolve = resolve;
 			this.connectingPromise.reject = reject;
@@ -191,7 +194,7 @@ class Session {
 		this.session.on('debug', (type, msg, payload) => {
 			if (type.includes('pdu.')) {
 				this.eventEmitter.emit(msg, payload);
-				this.eventEmitter.emit('*', payload);
+				this.eventEmitter.emit(Session.ANY_PDU_EVENT, payload);
 			}
 		})
 		this.connectingPromise.resolve();
@@ -249,8 +252,7 @@ class Session {
 			                       source_addr: source,
 			                       destination_addr: destination,
 			                       short_message: message
-		                       }, function(pdu) {
-			console.log(pdu);
+		                       }, pdu => {
 		});
 		this.session.close();
 	}
@@ -284,6 +286,7 @@ class Session {
 }
 
 class SessionManager {
+	// TODO: Also enable session deletion (not just disconnection)
 	sessionIdCounter = 0;
 	logger = new Logger("SessionManager");
 
@@ -301,10 +304,6 @@ class SessionManager {
 	addSession(session) {
 		this.logger.log1(`Adding session with ID ${session.id}`);
 		this.sessions.push(session);
-	}
-
-	getSessions() {
-		return this.sessions;
 	}
 
 	getSession(id) {
@@ -437,6 +436,10 @@ class WSServer {
 	addClient(ws, sessionId) {
 		if (!this.clients[sessionId]) {
 			this.clients[sessionId] = [];
+			let session = sessionManager.getSession(sessionId);
+			if (session) {
+				session.on(Session.STATUS_CHANGED_EVENT, this.onSessionChange.bind(this, sessionId));
+			}
 		}
 		this.logger.log1(`Added client to session ID: ${sessionId}`);
 		this.clients[sessionId].push(ws);
@@ -465,15 +468,20 @@ class WSServer {
 				delete this.clients[sessionId][index];
 			}
 		}
-		this.cleanClients();
 	}
 
-	cleanClients() {
-		for (let sessionId in this.clients) {
-			this.clients[sessionId] = this.clients[sessionId].filter(Boolean);
-			if (this.clients[sessionId].length === 0) {
-				delete this.clients[sessionId];
-			}
+	onSessionChange(sessionId, session) {
+		// TODO: Also maybe create a broadcast for any pdu
+		// To do this add ssomething to the client message maybe like sessionId:listenToPdu?
+		// So something like 0:1 or 0:true
+		// Then send any pdu updates to all clients with listen to true
+		this.logger.log1(`Session with ID ${sessionId} changed`);
+		if (this.clients[sessionId]) {
+			this.logger.log1(`Broadcasting session with ID ${sessionId} to ${this.clients[sessionId].length} clients`)
+			let value = session.serialize();
+			this.clients[sessionId].forEach(client => {
+				client.send(JSON.stringify(value));
+			});
 		}
 	}
 }
@@ -486,22 +494,5 @@ function sleep(ms) {
 
 let sessionManager = new SessionManager();
 let session = sessionManager.createSession('localhost:7001', 'test', 'test');
-session.on('statusChanged', (status) => {
-	logger.log1(`NEW STATUS! ${status}`);
-});
-// session.on('*', pdu => {
-// 	logger.log1(pdu);
-// });
-
-// session.connect().then(() => {
-// 	session.bind().catch(() => {
-// 		logger.log1("AAA");
-// 	})
-// 		.then(() => {
-// 			logger.log1("OK");
-// 			session.send("123", "456", "test");
-// 			sleep(600 * 1000);
-// 		});
-// });
 new WSServer();
 new HTTPServer();
