@@ -1,5 +1,4 @@
 const smpp = require("smpp");
-const keyboard = require("keyboardjs");
 const fs = require("fs");
 const path = require("path");
 const EventEmitter = require("events");
@@ -13,6 +12,7 @@ const WebSocket = require("ws");
 const SERVER_PORT = process.env.SERVER_PORT || 8190;
 const WS_SERVER_PORT = process.env.WS_SERVER_PORT || 8191;
 const SESSIONS_FILE = process.env.SESSIONS_FILE || "sessions.json";
+const MIN_MESSAGE_SEND_UPDATE_DELAY = process.env.MIN_MESSAGE_SEND_UPDATE_DELAY || 500;
 
 
 [
