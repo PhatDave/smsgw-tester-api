@@ -471,6 +471,7 @@ class WSServer {
 			let session = sessionManager.getSession(sessionId);
 			if (session) {
 				session.on(Session.STATUS_CHANGED_EVENT, this.onSessionChange.bind(this, sessionId));
+				session.on(Session.ANY_PDU_EVENT, this.pduEvent.bind(this, sessionId));
 			}
 		}
 		this.logger.log1(`Added client to session ID: ${sessionId}`);
@@ -504,16 +505,33 @@ class WSServer {
 	}
 
 	onSessionChange(sessionId, newStatus) {
-		// TODO: Also maybe create a broadcast for any pdu
-		// To do this add ssomething to the client message maybe like sessionId:listenToPdu?
-		// So something like 0:1 or 0:true
-		// Then send any pdu updates to all clients with listen to true
 		this.logger.log1(`Session with ID ${sessionId} changed`);
+		let payload = {
+			type: 'status',
+			sessionId: sessionId,
+			value: newStatus
+		}
 		let clients = this.clients[sessionId];
 		if (!!clients) {
-			this.logger.log1(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`)
+			this.logger.log1(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
 			clients.forEach(client => {
-				client.send(newStatus);
+				client.send(JSON.stringify(payload));
+			});
+		}
+	}
+
+	pduEvent(sessionId, pdu) {
+		this.logger.log2(`Session with ID ${sessionId} fired PDU`);
+		let payload = {
+			type: 'pdu',
+			sessionId: sessionId,
+			value: pdu
+		}
+		let clients = this.clients[sessionId];
+		if (!!clients) {
+			this.logger.log2(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
+			clients.forEach(client => {
+				client.send(JSON.stringify(payload));
 			});
 		}
 	}
