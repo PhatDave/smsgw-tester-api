@@ -15,7 +15,7 @@ const CLIENT_SESSIONS_FILE = process.env.CLIENT_SESSIONS_FILE || "client_session
 const CENTER_SESSIONS_FILE = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 const MESSAGE_SEND_UPDATE_DELAY = process.env.MESSAGE_SEND_UPDATE_DELAY || 500;
 
-
+// TODO: Implement methods on both clients and servers that allows for modification of usernames and passwords
 [
 	'debug',
 	'log',
@@ -416,7 +416,7 @@ class CenterSessionStatus {
 }
 
 class CenterSession {
-	auto_enquire_link_period = 500;
+	// TODO: Currently this center behaves as a DEBUG server, Implement ECHO and DR functionality
 	eventEmitter = new EventEmitter();
 	busy = false;
 	session = null;
@@ -472,6 +472,7 @@ class CenterSession {
 		this.logger.log1("Center got a connection on port " + this.port);
 		this.setStatus(CenterSessionStatus.CONNECTION_PENDING);
 
+		this.session = session;
 		session.on('error', this.error.bind(this));
 
 		function bind_transciever(pdu) {
@@ -482,6 +483,12 @@ class CenterSession {
 				session.send(pdu.response());
 				session.resume();
 				this.setStatus(CenterSessionStatus.CONNECTED);
+				session.on('debug', (type, msg, payload) => {
+					if (type.includes('pdu.')) {
+						this.eventEmitter.emit(msg, payload);
+						this.eventEmitter.emit(ClientSession.ANY_PDU_EVENT, payload);
+					}
+				});
 			} else {
 				this.logger.log1(`Connection failed, invalid credentials`);
 				session.send(pdu.response({
@@ -489,29 +496,30 @@ class CenterSession {
 				                          }));
 				this.setStatus(CenterSessionStatus.WAITING_CONNECTION);
 				session.close();
+				this.session = null;
 			}
 		}
 
 		session.on('bind_transceiver', bind_transciever.bind(this));
 	}
 
-	// notify(source, destination, message) {
-	// 	return new Promise((resolve, reject) => {
-	// 		if (!this.canSend()) {
-	// 			this.logger.log1(`Cannot send message, not bound to ${this.url} or busy`);
-	// 			reject(`Cannot send message, not bound to ${this.url} or busy`);
-	// 			return;
-	// 		}
-	// 		this.logger.log1(`Sending message from ${source} to ${destination} with message ${message}`);
-	// 		this.session.submit_sm({
-	// 			                       source_addr: source,
-	// 			                       destination_addr: destination,
-	// 			                       short_message: message
-	// 		                       }, pdu => {
-	// 			resolve(pdu);
-	// 		});
-	// 	});
-	// }
+	notify(source, destination, message) {
+		return new Promise((resolve, reject) => {
+			if (!this.canSend()) {
+				this.logger.log1(`Cannot send message, no client connected on ${this.port} or busy`);
+				reject(`Cannot send message, no client connected on ${this.port} or busy`);
+				return;
+			}
+			this.logger.log1(`Sending notify message from ${source} to ${destination} with message ${message}`);
+			this.session.submit_sm({
+				                       source_addr: source,
+				                       destination_addr: destination,
+				                       short_message: message
+			                       }, pdu => {
+				resolve(pdu);
+			});
+		});
+	}
 
 	// notifyOnInterval(source, destination, message, interval, count) {
 	// 	return new Promise((resolve, reject) => {
@@ -619,7 +627,7 @@ class CenterSessionManager {
 	}
 
 	deleteSession(server) {
-		this.logger.log1(`Deleting session with ID ${server.id}`);
+		this.logger.log1(`Deleting server with ID ${server.id}`);
 		if (server.status === CenterSessionStatus.CONNECTED) {
 			server.close();
 		}
@@ -675,16 +683,14 @@ class HTTPServer {
 		app.delete('/api/client/:id/connect', this.disconnectClientSession.bind(this));
 		app.delete('/api/client/:id', this.deleteClientSession.bind(this));
 
-		// app.get('/api/center', this.getCenterSessions.bind(this));
-		// app.post('/api/center', this.createCenterSession.bind(this));
-		// app.get('/api/center/:id', this.getCenterSessionById.bind(this));
-		// app.post('/api/center/:id/send', this.notify.bind(this));
-		// app.post('/api/center/:id/sendMany', this.notifyMany.bind(this));
-		// app.delete('/api/center/:id/sendMany', this.cancelNotifyMany.bind(this));
-		// app.post('/api/center/:id/bind', this.bindCenterSession.bind(this));
-		// app.post('/api/center/:id/connect', this.connectCenterSession.bind(this));
-		// app.delete('/api/center/:id/connect', this.disconnectCenterSession.bind(this));
-		// app.delete('/api/center/:id', this.deleteCenterSession.bind(this));
+		app.get('/api/center', this.getCenterSessions.bind(this));
+		app.post('/api/center', this.createCenterSession.bind(this));
+		app.get('/api/center/:id', this.getCenterSessionById.bind(this));
+		app.post('/api/center/:id/send', this.notify.bind(this));
+		app.post('/api/center/:id/sendMany', this.notifyMany.bind(this));
+		app.delete('/api/center/:id/sendMany', this.cancelNotifyMany.bind(this));
+		app.delete('/api/center/:id/connect', this.disconnectCenterSession.bind(this));
+		app.delete('/api/center/:id', this.deleteCenterServer.bind(this));
 
 		this.server = app.listen(SERVER_PORT, function() {
 			this.logger.log1(`HTTPServer listening at http://localhost:${SERVER_PORT}`)
@@ -694,24 +700,24 @@ class HTTPServer {
 	// TODO: These requests deserve error handling
 
 	getClientSessions(req, res) {
-		this.logger.log1("Getting sessions");
+		this.logger.log1("Getting client sessions");
 		res.send(JSON.stringify(clientSessionManager.serialize()));
 	}
 
 	createClientSession(req, res) {
-		this.logger.log1("Creating session");
+		this.logger.log1("Creating client session");
 		let session = clientSessionManager.createSession(req.body.url, req.body.username, req.body.password);
 		res.send(JSON.stringify(session.serialize()));
 	}
 
 	getClientSessionById(req, res) {
 		let session = clientSessionManager.getSession(req.params.id);
-		this.logger.log1(`Getting session by ID ${req.params.id}`);
+		this.logger.log1(`Getting client session by ID ${req.params.id}`);
 		if (session) {
-			this.logger.log1(`Session found with ID ${req.params.id}`)
+			this.logger.log1(`Client session found with ID ${req.params.id}`)
 			res.send(JSON.stringify(session.serialize()));
 		} else {
-			this.logger.log1(`No session found with ID ${req.params.id}`);
+			this.logger.log1(`No client session found with ID ${req.params.id}`);
 			res.status(404).send();
 		}
 	}
@@ -775,7 +781,7 @@ class HTTPServer {
 	}
 
 	bindClientSession(req, res) {
-		this.logger.log1(`Binding session with ID ${req.params.id}`)
+		this.logger.log1(`Binding client session with ID ${req.params.id}`)
 		// Maybe make this async?
 		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
@@ -792,7 +798,7 @@ class HTTPServer {
 	}
 
 	connectClientSession(req, res) {
-		this.logger.log1(`Connecting session with ID ${req.params.id}`)
+		this.logger.log1(`Connecting client session with ID ${req.params.id}`)
 		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
 			session.connect()
@@ -808,7 +814,7 @@ class HTTPServer {
 	}
 
 	disconnectClientSession(req, res) {
-		this.logger.log1(`Disconnecting session with ID ${req.params.id}`)
+		this.logger.log1(`Disconnecting client session with ID ${req.params.id}`)
 		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
 			session.close()
@@ -824,10 +830,73 @@ class HTTPServer {
 	}
 
 	deleteClientSession(req, res) {
-		this.logger.log1(`Deleting session with ID ${req.params.id}`);
+		this.logger.log1(`Deleting client session with ID ${req.params.id}`);
 		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
 			clientSessionManager.deleteSession(session);
+			res.send();
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	getCenterSessions(req, res) {
+		this.logger.log1("Getting center sessions");
+		res.send(JSON.stringify(clientSessionManager.serialize()));
+	}
+
+	createCenterSession(req, res) {
+		this.logger.log1("Creating center session");
+		let session = clientSessionManager.createSession(req.body.port, req.body.username, req.body.password);
+		res.send(JSON.stringify(session.serialize()));
+	}
+
+	getCenterSessionById(req, res) {
+		let session = centerSessionManager.getSession(req.params.id);
+		this.logger.log1(`Getting center session by ID ${req.params.id}`);
+		if (session) {
+			this.logger.log1(`Center session found with ID ${req.params.id}`)
+			res.send(JSON.stringify(session.serialize()));
+		} else {
+			this.logger.log1(`No center session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	notify(req, res) {
+		return undefined;
+	}
+
+	notifyMany(req, res) {
+		return undefined;
+	}
+
+	cancelNotifyMany(req, res) {
+		return undefined;
+	}
+
+	disconnectCenterSession(req, res) {
+		this.logger.log1(`Disconnecting center session with ID ${req.params.id}`)
+		let server = centerSessionManager.getSession(req.params.id);
+		if (server) {
+			server.close()
+				.then(() => res.send(JSON.stringify(server.serialize())))
+				.catch(err => res.status(400).send({
+					                                   err: true,
+					                                   msg: err
+				                                   }));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	deleteCenterServer(req, res) {
+		this.logger.log1(`Deleting center session with ID ${req.params.id}`);
+		let server = centerSessionManager.getSession(req.params.id);
+		if (server) {
+			centerSessionManager.deleteSession(server);
 			res.send();
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
@@ -947,13 +1016,8 @@ let centerSessionManager = new CenterSessionManager();
 clientSessionManager.startup();
 centerSessionManager.startup();
 
-let session = clientSessionManager.createSession('smpp://localhost:7001', '123', 'test');
+let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
 let server = centerSessionManager.createSession(7001, 'test', 'test');
-
-session.connect().then(() => session.bind()).catch(err => console.log(err));
-server.on(CenterSession.STATUS_CHANGED_EVENT, (status) => {
-	console.log(status);
-});
 
 new WSServer();
 new HTTPServer();
