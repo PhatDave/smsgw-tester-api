@@ -147,6 +147,29 @@ class ClientSession {
 		this.status = ClientSessionStatus.NOT_CONNECTED;
 	}
 
+	setUsername(username) {
+		this.username = username;
+		this.refresh();
+	}
+
+	setPassword(password) {
+		this.password = password;
+		this.refresh();
+	}
+
+	refresh() {
+		let status = this.status;
+		this.close();
+		if (status === ClientSessionStatus.CONNECTED) {
+			this.connect();
+		}
+		if (status === ClientSessionStatus.BOUND) {
+			this.connect().then(() => {
+				this.bind();
+			});
+		}
+	}
+
 	setStatus(newStatus) {
 		this.status = newStatus;
 		this.eventEmitter.emit(ClientSession.STATUS_CHANGED_EVENT, newStatus);
@@ -1073,8 +1096,15 @@ clientSessionManager.startup();
 centerSessionManager.startup();
 
 let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
-// let server = centerSessionManager.createSession(3734, 'test', 'test');
-session.connect().then(() => session.bind());
+let server = centerSessionManager.createSession(7001, 'test', 'test');
+
+// session.connect()
+// 	.then(() => {
+// 		session.bind().catch(err => console.log(err));
+// 	}).catch(err => console.log(err));
+//
+// setTimeout(() => session.setUsername("test123"), 2000);
+// setTimeout(() => session.setPassword("test123"), 4000);
 
 new WSServer();
 new HTTPServer();
