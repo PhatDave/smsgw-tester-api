@@ -161,12 +161,12 @@ class ClientSession {
 		let status = this.status;
 		this.close();
 		if (status === ClientSessionStatus.CONNECTED) {
-			this.connect();
+			this.connect().catch(err => this.logger.log1(err));
 		}
 		if (status === ClientSessionStatus.BOUND) {
 			this.connect().then(() => {
-				this.bind();
-			});
+				this.bind().catch((err => this.logger.log1(err)));
+			}).catch((err => this.logger.log1(err)));
 		}
 	}
 
@@ -703,6 +703,7 @@ class HTTPServer {
 		app.get('/api/client', this.getClientSessions.bind(this));
 		app.post('/api/client', this.createClientSession.bind(this));
 		app.get('/api/client/:id', this.getClientSessionById.bind(this));
+		app.patch('/api/client/:id', this.patchClientSession.bind(this));
 		app.post('/api/client/:id/send', this.send.bind(this));
 		app.post('/api/client/:id/sendMany', this.sendMany.bind(this));
 		app.delete('/api/client/:id/sendMany', this.cancelSendMany.bind(this));
@@ -729,13 +730,13 @@ class HTTPServer {
 
 	getClientSessions(req, res) {
 		this.logger.log1("Getting client sessions");
-		res.send(JSON.stringify(clientSessionManager.serialize()));
+		res.send(clientSessionManager.serialize());
 	}
 
 	createClientSession(req, res) {
 		this.logger.log1("Creating client session");
 		let session = clientSessionManager.createSession(req.body.url, req.body.username, req.body.password);
-		res.send(JSON.stringify(session.serialize()));
+		res.send(session.serialize());
 	}
 
 	getClientSessionById(req, res) {
@@ -743,7 +744,24 @@ class HTTPServer {
 		this.logger.log1(`Getting client session by ID ${req.params.id}`);
 		if (session) {
 			this.logger.log1(`Client session found with ID ${req.params.id}`)
-			res.send(JSON.stringify(session.serialize()));
+			res.send(session.serialize());
+		} else {
+			this.logger.log1(`No client session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	patchClientSession(req, res) {
+		let session = clientSessionManager.getSession(req.params.id);
+		if (session) {
+			this.logger.log1(`Client session found with ID ${req.params.id}`)
+			if (!!req.body.username && req.body.username !== session.username) {
+				session.setUsername(req.body.username);
+			}
+			if (!!req.body.password && req.body.password !== session.password) {
+				session.setPassword(req.body.password);
+			}
+			res.send(session.serialize());
 		} else {
 			this.logger.log1(`No client session found with ID ${req.params.id}`);
 			res.status(404).send();
@@ -758,7 +776,7 @@ class HTTPServer {
 		this.logger.log1(`Sending message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
 		if (session) {
 			session.send(source, destination, message)
-				.then(pdu => res.send(JSON.stringify(pdu)))
+				.then(pdu => res.send(pdu))
 				.catch(err => res.status(400).send(JSON.stringify(err)));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
@@ -781,8 +799,8 @@ class HTTPServer {
 			`Sending ${count} messages from ${source} to ${destination} with message ${message} on session with ID ${req.params.id} at a rate of ${perSecond} per second.`);
 		if (session) {
 			session.sendOnInterval(source, destination, message, interval, count)
-				.then(pdu => res.send(JSON.stringify(pdu)))
-				.catch(err => res.status(400).send(JSON.stringify(err)));
+				.then(pdu => res.send(pdu))
+				.catch(err => res.status(400).send((err)));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
 			res.status(404).send();
@@ -814,7 +832,7 @@ class HTTPServer {
 		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
 			session.bind()
-				.then(() => res.send(JSON.stringify(session.serialize())))
+				.then(() => res.send(session.serialize()))
 				.catch(err => res.status(400).send({
 					                                   err: true,
 					                                   msg: err
@@ -830,7 +848,7 @@ class HTTPServer {
 		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
 			session.connect()
-				.then(() => res.send(JSON.stringify(session.serialize())))
+				.then(() => res.send(session.serialize()))
 				.catch(err => res.status(400).send({
 					                                   err: true,
 					                                   msg: err
@@ -846,7 +864,7 @@ class HTTPServer {
 		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
 			session.close()
-				.then(() => res.send(JSON.stringify(session.serialize())))
+				.then(() => res.send(session.serialize()))
 				.catch(err => res.status(400).send({
 					                                   err: true,
 					                                   msg: err
@@ -871,13 +889,13 @@ class HTTPServer {
 
 	getCenterSessions(req, res) {
 		this.logger.log1("Getting center sessions");
-		res.send(JSON.stringify(centerSessionManager.serialize()));
+		res.send(centerSessionManager.serialize());
 	}
 
 	createCenterSession(req, res) {
 		this.logger.log1("Creating center session");
 		let session = centerSessionManager.createSession(req.body.port, req.body.username, req.body.password);
-		res.send(JSON.stringify(session.serialize()));
+		res.send(session.serialize());
 	}
 
 	getCenterSessionById(req, res) {
@@ -885,7 +903,7 @@ class HTTPServer {
 		this.logger.log1(`Getting center session by ID ${req.params.id}`);
 		if (session) {
 			this.logger.log1(`Center session found with ID ${req.params.id}`)
-			res.send(JSON.stringify(session.serialize()));
+			res.send(session.serialize());
 		} else {
 			this.logger.log1(`No center session found with ID ${req.params.id}`);
 			res.status(404).send();
@@ -900,8 +918,8 @@ class HTTPServer {
 		this.logger.log1(`Sending notify message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
 		if (server) {
 			server.notify(source, destination, message)
-				.then(pdu => res.send(JSON.stringify(pdu)))
-				.catch(err => res.status(400).send(JSON.stringify(err)));
+				.then(pdu => res.send(pdu))
+				.catch(err => res.status(400).send(err));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
 			res.status(404).send();
@@ -923,8 +941,8 @@ class HTTPServer {
 			`Sending ${count} notify messages from ${source} to ${destination} with message ${message} on session with ID ${req.params.id} at a rate of ${perSecond} per second.`);
 		if (server) {
 			server.notifyOnInterval(source, destination, message, interval, count)
-				.then(pdu => res.send(JSON.stringify(pdu)))
-				.catch(err => res.status(400).send(JSON.stringify(err)));
+				.then(pdu => res.send(pdu))
+				.catch(err => res.status(400).send(err));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
 			res.status(404).send();
@@ -955,7 +973,7 @@ class HTTPServer {
 		let server = centerSessionManager.getSession(req.params.id);
 		if (server) {
 			server.close()
-				.then(() => res.send(JSON.stringify(server.serialize())))
+				.then(() => res.send(server.serialize()))
 				.catch(err => res.status(400).send({
 					                                   err: true,
 					                                   msg: err
