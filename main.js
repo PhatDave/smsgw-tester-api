@@ -211,6 +211,7 @@ class ClientSession {
 			this.logger.log1("Client connection failed to " + this.url);
 		}
 		this.session.close();
+		this.connectingPromise.reject(error);
 		this.setStatus(ClientSessionStatus.NOT_CONNECTED);
 	}
 
@@ -1238,7 +1239,7 @@ class WSServer {
 
 	onClose(ws) {
 		this.removeClient(ws);
-		this.logger.log6(this.clients);
+		// this.logger.log6(this.clients);
 		this.logger.log1("Connection closed");
 	}
 
@@ -1279,6 +1280,10 @@ class WSServer {
 	}
 
 	onClientSessionPdu(sessionId, pdu) {
+		// TODO: Maybe move this to an "ignored" array against who the pdu.command is compared
+		if (pdu.command === 'enquire_link_resp' || pdu.command === 'enquire_link') {
+			return;
+		}
 		let clients = this.clients["client"][sessionId];
 		if (!!clients) {
 			this.logger.log2(`Session with ID ${sessionId} fired PDU`);
@@ -1330,6 +1335,9 @@ class WSServer {
 	}
 
 	onCenterServerPdu(sessionId, pdu) {
+		if (pdu.command === 'enquire_link_resp' || pdu.command === 'enquire_link') {
+			return;
+		}
 		let clients = this.clients["center"][sessionId];
 		if (!!clients) {
 			this.logger.log2(`Session with ID ${sessionId} fired PDU`);
