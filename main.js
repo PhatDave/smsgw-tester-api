@@ -396,12 +396,265 @@ class ClientSessionManager {
 	}
 
 	startup() {
-		let sessions = fs.readFileSync(CLIENT_SESSIONS_FILE);
-		sessions = JSON.parse(sessions);
-		this.logger.log1(`Loaded ${sessions.length} sessions from ${CLIENT_SESSIONS_FILE}...`);
-		sessions.forEach(session => {
-			this.createSession(session.url, session.username, session.password);
-		})
+		try {
+			let sessions = fs.readFileSync(CLIENT_SESSIONS_FILE);
+			sessions = JSON.parse(sessions);
+			this.logger.log1(`Loaded ${sessions.length} sessions from ${CLIENT_SESSIONS_FILE}...`);
+			sessions.forEach(session => {
+				this.createSession(session.url, session.username, session.password);
+			});
+		} catch (e) {
+			this.logger.log1(`Error loading sessions from ${CLIENT_SESSIONS_FILE}: ${e}`);
+		}
+	}
+}
+
+class CenterSessionStatus {
+	static CONNECTED = "CONNECTED";
+	static WAITING_CONNECTION = "WAITING_CONNECTION";
+	static CONNECTION_PENDING = "CONNECTION_PENDING";
+}
+
+class CenterSession {
+	auto_enquire_link_period = 500;
+	eventEmitter = new EventEmitter();
+	busy = false;
+	session = null;
+
+	disconnectingPromise = {
+		promise: null,
+		resolve: null,
+		reject: null
+	}
+
+	static STATUS_CHANGED_EVENT = "statusChanged";
+	static ANY_PDU_EVENT = "*";
+	static MESSAGE_SEND_COUNTER_UPDATE_EVENT = "messageSendCounterUpdate";
+
+	constructor(id, port, username, password) {
+		this.id = id;
+		this.logger = new Logger(`CenterSession-${this.id}`);
+		this.port = port;
+
+		this.username = username;
+		this.password = password;
+
+		this.server = smpp.createServer({}, this.connected.bind(this));
+		this.server.on('debug', (type, msg, payload) => {
+			if (type.includes('pdu.')) {
+				this.eventEmitter.emit(msg, payload);
+				this.eventEmitter.emit(ClientSession.ANY_PDU_EVENT, payload);
+			}
+		});
+		this.server.listen(this.port);
+
+		this.logger.log1(`Session created with port ${this.port}, username ${this.username}, password ${this.password} and ID ${this.id}`);
+		this.status = CenterSessionStatus.WAITING_CONNECTION;
+	}
+
+	setStatus(newStatus) {
+		this.status = newStatus;
+		this.eventEmitter.emit(ClientSession.STATUS_CHANGED_EVENT, newStatus);
+	}
+
+	error(error) {
+		if (error.code === "ETIMEOUT") {
+			this.logger.log1("Connection timed out to " + this.port);
+		} else if (error.code === "ECONNREFUSED") {
+			this.logger.log1("Connection refused to " + this.port);
+		} else {
+			this.logger.log1("Connection failed to " + this.port);
+		}
+		this.setStatus(CenterSessionStatus.CONNECTION_PENDING);
+	}
+
+	connected(session) {
+		this.logger.log1("Center got a connection on port " + this.port);
+		this.setStatus(CenterSessionStatus.CONNECTION_PENDING);
+
+		session.on('error', this.error.bind(this));
+
+		function bind_transciever(pdu) {
+			this.logger.log1(`Center got a bind_transciever on port ${this.port} with system_id ${pdu.system_id} and password ${pdu.password}`);
+			session.pause();
+			if (pdu.system_id === this.username && pdu.password === this.password) {
+				this.logger.log1(`Connection successful`);
+				session.send(pdu.response());
+				session.resume();
+				this.setStatus(CenterSessionStatus.CONNECTED);
+			} else {
+				this.logger.log1(`Connection failed, invalid credentials`);
+				session.send(pdu.response({
+					                          command_status: smpp.ESME_RBINDFAIL
+				                          }));
+				this.setStatus(CenterSessionStatus.WAITING_CONNECTION);
+				session.close();
+			}
+		}
+
+		session.on('bind_transceiver', bind_transciever.bind(this));
+	}
+
+	// notify(source, destination, message) {
+	// 	return new Promise((resolve, reject) => {
+	// 		if (!this.canSend()) {
+	// 			this.logger.log1(`Cannot send message, not bound to ${this.url} or busy`);
+	// 			reject(`Cannot send message, not bound to ${this.url} or busy`);
+	// 			return;
+	// 		}
+	// 		this.logger.log1(`Sending message from ${source} to ${destination} with message ${message}`);
+	// 		this.session.submit_sm({
+	// 			                       source_addr: source,
+	// 			                       destination_addr: destination,
+	// 			                       short_message: message
+	// 		                       }, pdu => {
+	// 			resolve(pdu);
+	// 		});
+	// 	});
+	// }
+
+	// notifyOnInterval(source, destination, message, interval, count) {
+	// 	return new Promise((resolve, reject) => {
+	// 		if (!this.canSend() || this.busy) {
+	// 			this.logger.log1(`Cannot send many message, not bound to ${this.url} or busy`);
+	// 			reject(`Cannot send many message, not bound to ${this.url} or busy`);
+	// 			return;
+	// 		}
+	// 		this.busy = true;
+	// 		this.timer = new NanoTimer();
+	// 		let counter = 0;
+	// 		let previousUpdateCounter = 0;
+	//
+	// 		this.updateTimer = new NanoTimer();
+	// 		this.updateTimer.setInterval(() => {
+	// 			if (previousUpdateCounter !== counter) {
+	// 				this.eventEmitter.emit(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
+	// 				previousUpdateCounter = counter;
+	// 			}
+	// 		}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
+	//
+	// 		this.timer.setInterval(() => {
+	// 			if (count > 0 && counter >= count) {
+	// 				this.cancelNotifyInterval();
+	// 			} else {
+	// 				this.notify(source, destination, message)
+	// 					.catch(e => this.logger.log1(`Error sending message: ${e}`));
+	// 				counter++;
+	// 			}
+	// 		}, '', `${interval} s`);
+	// 		resolve();
+	// 	});
+	// }
+
+	// cancelNotifyInterval() {
+	// 	if (!!this.timer) {
+	// 		this.timer.clearInterval();
+	// 		this.updateTimer.clearInterval();
+	// 		this.timer = null;
+	// 		this.updateTimer = null;
+	// 	}
+	// 	this.busy = false;
+	// }
+
+	close() {
+		this.disconnectingPromise.promise = new Promise((resolve, reject) => {
+			if (this.status !== CenterSessionStatus.CONNECTED) {
+				this.logger.log1(`Cannot close session, no clients bound to ${this.port}`);
+				reject(`Cannot close session, no clients bound to ${this.port}`);
+				return;
+			}
+			this.session.close();
+			this.setStatus(CenterSessionStatus.WAITING_CONNECTION);
+			resolve();
+		});
+		return this.disconnectingPromise.promise;
+	}
+
+	on(event, callback) {
+		this.eventEmitter.on(event, callback);
+	}
+
+	serialize() {
+		return {
+			id: this.id,
+			port: this.port,
+			username: this.username,
+			password: this.password,
+			status: this.status
+		}
+	}
+
+	canSend() {
+		return this.status === CenterSessionStatus.CONNECTED;
+	}
+}
+
+class CenterSessionManager {
+	sessionIdCounter = 0;
+	logger = new Logger("CenterSessionManager");
+
+	constructor() {
+		this.servers = {};
+		// process.on('exit', this.cleanup.bind(this));
+		// process.on('SIGINT', this.cleanup.bind(this));
+		// process.on('SIGUSR1', this.cleanup.bind(this));
+		// process.on('SIGUSR2', this.cleanup.bind(this));
+		// process.on('uncaughtException', this.cleanup.bind(this));
+	}
+
+	createSession(port, username, password) {
+		if (this.servers[port]) {
+			this.logger.log1(`Center listening on ${port} already exists`);
+			return this.servers[port];
+		}
+		this.logger.log1(`Creating center listening on ${port} with username ${username} and password ${password}`);
+		let session = new CenterSession(this.sessionIdCounter++, port, username, password);
+		this.addSession(session);
+		return session;
+	}
+
+	addSession(server) {
+		this.logger.log1(`Adding session with ID ${server.id}`);
+		this.servers[server.port] = server;
+	}
+
+	deleteSession(server) {
+		this.logger.log1(`Deleting session with ID ${server.id}`);
+		if (server.status === CenterSessionStatus.CONNECTED) {
+			server.close();
+		}
+		delete this.servers[server.port];
+	}
+
+	getSession(id) {
+		return Object.values(this.servers).find((session) => {
+			return session.id == id;
+		});
+	}
+
+	serialize() {
+		return Object.values(this.servers).map((servers) => {
+			return servers.serialize();
+		});
+	}
+
+	cleanup() {
+		this.logger.log1(`Saving sessions to ${CENTER_SESSIONS_FILE}...`);
+		fs.writeFileSync(CENTER_SESSIONS_FILE, JSON.stringify(this.serialize(), null, 4));
+		process.exit(0);
+	}
+
+	startup() {
+		try {
+			let servers = fs.readFileSync(CENTER_SESSIONS_FILE);
+			servers = JSON.parse(servers);
+			this.logger.log1(`Loaded ${servers.length} sessions from ${CENTER_SESSIONS_FILE}...`);
+			servers.forEach(server => {
+				this.createSession(server.port, server.username, server.password);
+			});
+		} catch (e) {
+			this.logger.log1(`Error loading sessions from ${CLIENT_SESSIONS_FILE}: ${e}`);
+		}
 	}
 }
 
@@ -421,6 +674,17 @@ class HTTPServer {
 		app.post('/api/client/:id/connect', this.connectClientSession.bind(this));
 		app.delete('/api/client/:id/connect', this.disconnectClientSession.bind(this));
 		app.delete('/api/client/:id', this.deleteClientSession.bind(this));
+
+		// app.get('/api/center', this.getCenterSessions.bind(this));
+		// app.post('/api/center', this.createCenterSession.bind(this));
+		// app.get('/api/center/:id', this.getCenterSessionById.bind(this));
+		// app.post('/api/center/:id/send', this.notify.bind(this));
+		// app.post('/api/center/:id/sendMany', this.notifyMany.bind(this));
+		// app.delete('/api/center/:id/sendMany', this.cancelNotifyMany.bind(this));
+		// app.post('/api/center/:id/bind', this.bindCenterSession.bind(this));
+		// app.post('/api/center/:id/connect', this.connectCenterSession.bind(this));
+		// app.delete('/api/center/:id/connect', this.disconnectCenterSession.bind(this));
+		// app.delete('/api/center/:id', this.deleteCenterSession.bind(this));
 
 		this.server = app.listen(SERVER_PORT, function() {
 			this.logger.log1(`HTTPServer listening at http://localhost:${SERVER_PORT}`)
@@ -679,8 +943,17 @@ class WSServer {
 }
 
 let clientSessionManager = new ClientSessionManager();
+let centerSessionManager = new CenterSessionManager();
 clientSessionManager.startup();
-let session = clientSessionManager.getSession(0);
-session.connect().then(() => session.bind());
+centerSessionManager.startup();
+
+let session = clientSessionManager.createSession('smpp://localhost:7001', '123', 'test');
+let server = centerSessionManager.createSession(7001, 'test', 'test');
+
+session.connect().then(() => session.bind()).catch(err => console.log(err));
+server.on(CenterSession.STATUS_CHANGED_EVENT, (status) => {
+	console.log(status);
+});
+
 new WSServer();
 new HTTPServer();
