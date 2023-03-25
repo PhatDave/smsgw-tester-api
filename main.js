@@ -101,7 +101,7 @@ class Logger {
 
 let logger = new Logger("main");
 
-class SessionStatus {
+class ClientSessionStatus {
 	static OK = "OK";
 	static CONNECTING = "CONNECTING";
 	static CONNECTED = "CONNECTED";
@@ -113,7 +113,7 @@ class SessionStatus {
 	static NOT_CONNECTED = "NOT_CONNECTED";
 }
 
-class Session {
+class ClientSession {
 	auto_enquire_link_period = 500;
 	eventEmitter = new EventEmitter();
 	busy = false;
@@ -147,23 +147,23 @@ class Session {
 		this.password = password;
 
 		this.logger.log1(`Session created with url ${this.url}, username ${this.username}, password ${this.password} and ID ${this.id}`);
-		this.status = SessionStatus.NOT_CONNECTED;
+		this.status = ClientSessionStatus.NOT_CONNECTED;
 	}
 
 	setStatus(newStatus) {
 		this.status = newStatus;
-		this.eventEmitter.emit(Session.STATUS_CHANGED_EVENT, newStatus);
+		this.eventEmitter.emit(ClientSession.STATUS_CHANGED_EVENT, newStatus);
 	}
 
 	connect() {
 		this.connectingPromise.promise = new Promise((resolve, reject) => {
-			if (this.status !== SessionStatus.NOT_CONNECTED) {
-				this.logger.log1("Session already connected");
-				reject("Session already connected");
+			if (this.status !== ClientSessionStatus.NOT_CONNECTED) {
+				this.logger.log1("ClientSession already connected");
+				reject("ClientSession already connected");
 				return;
 			}
 			this.logger.log1("Connecting to " + this.url);
-			this.setStatus(SessionStatus.CONNECTING);
+			this.setStatus(ClientSessionStatus.CONNECTING);
 			try {
 				this.session = smpp.connect({
 					                            url: this.url,
@@ -172,7 +172,7 @@ class Session {
 				this.session.on('error', this.clientError.bind(this));
 			} catch (e) {
 				this.logger.log1("Connection failed to " + this.url);
-				this.setStatus(SessionStatus.CONNECT_FAILED);
+				this.setStatus(ClientSessionStatus.CONNECT_FAILED);
 				reject("Connection failed to " + this.url);
 			}
 			this.connectingPromise.resolve = resolve;
@@ -193,11 +193,11 @@ class Session {
 
 	connected() {
 		this.logger.log1("Connected to " + this.url);
-		this.setStatus(SessionStatus.CONNECTED);
+		this.setStatus(ClientSessionStatus.CONNECTED);
 		this.session.on('debug', (type, msg, payload) => {
 			if (type.includes('pdu.')) {
 				this.eventEmitter.emit(msg, payload);
-				this.eventEmitter.emit(Session.ANY_PDU_EVENT, payload);
+				this.eventEmitter.emit(ClientSession.ANY_PDU_EVENT, payload);
 			}
 		})
 		this.connectingPromise.resolve();
@@ -205,14 +205,14 @@ class Session {
 
 	bind() {
 		this.bindingPromise.promise = new Promise((resolve, reject) => {
-			if (this.status !== SessionStatus.CONNECTED) {
+			if (this.status !== ClientSessionStatus.CONNECTED) {
 				this.logger.log1(`Cannot bind, not connected to ${this.url}`);
 				reject(`Cannot bind, not connected to ${this.url}`);
 				return;
 			}
 
 			this.logger.log1("Trying to bind to " + this.url)
-			if (this.status !== SessionStatus.CONNECTED) {
+			if (this.status !== ClientSessionStatus.CONNECTED) {
 				this.logger.log1(`Cannot bind, not connected to ${this.url}`);
 				return;
 			}
@@ -220,7 +220,7 @@ class Session {
 				this.logger.log1(`Cannot bind, username or password not set`);
 				return;
 			}
-			this.setStatus(SessionStatus.BINDING);
+			this.setStatus(ClientSessionStatus.BINDING);
 			this.logger.log1(`Binding to ${this.url} with username ${this.username} and password ${this.password}`);
 
 			this.session.bind_transceiver({
@@ -236,11 +236,11 @@ class Session {
 	bindReply(pdu) {
 		if (pdu.command_status === 0) {
 			this.logger.log1(`Bound to ${this.url} with username ${this.username} and password ${this.password}`);
-			this.setStatus(SessionStatus.BOUND);
+			this.setStatus(ClientSessionStatus.BOUND);
 			this.bindingPromise.resolve();
 		} else {
 			this.logger.log1(`Bind failed to ${this.url} with username ${this.username} and password ${this.password}`);
-			this.setStatus(SessionStatus.BIND_FAILED);
+			this.setStatus(ClientSessionStatus.BIND_FAILED);
 			this.bindingPromise.reject();
 		}
 	}
@@ -278,7 +278,7 @@ class Session {
 			this.updateTimer = new NanoTimer();
 			this.updateTimer.setInterval(() => {
 				if (previousUpdateCounter !== counter) {
-					this.eventEmitter.emit(Session.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
+					this.eventEmitter.emit(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
 					previousUpdateCounter = counter;
 				}
 			}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
@@ -308,13 +308,13 @@ class Session {
 
 	close() {
 		this.disconnectingPromise.promise = new Promise((resolve, reject) => {
-			if (this.status !== SessionStatus.BOUND && this.status !== SessionStatus.CONNECTED) {
+			if (this.status !== ClientSessionStatus.BOUND && this.status !== ClientSessionStatus.CONNECTED) {
 				this.logger.log1(`Cannot close session, not bound to ${this.url}`);
 				reject(`Cannot close session, not bound to ${this.url}`);
 				return;
 			}
 			this.session.close();
-			this.setStatus(SessionStatus.NOT_CONNECTED);
+			this.setStatus(ClientSessionStatus.NOT_CONNECTED);
 			resolve();
 		});
 		return this.disconnectingPromise.promise;
@@ -335,13 +335,13 @@ class Session {
 	}
 
 	canSend() {
-		return this.status === SessionStatus.BOUND;
+		return this.status === ClientSessionStatus.BOUND;
 	}
 }
 
-class SessionManager {
+class ClientSessionManager {
 	sessionIdCounter = 0;
-	logger = new Logger("SessionManager");
+	logger = new Logger("ClientSessionManager");
 
 	constructor() {
 		this.sessions = {};
@@ -359,7 +359,7 @@ class SessionManager {
 			return this.sessions[urlB64];
 		}
 		this.logger.log1(`Creating session to ${url} with username ${username} and password ${password}`);
-		let session = new Session(this.sessionIdCounter++, url, username, password);
+		let session = new ClientSession(this.sessionIdCounter++, url, username, password);
 		this.addSession(session);
 		return session;
 	}
@@ -371,7 +371,7 @@ class SessionManager {
 
 	deleteSession(session) {
 		this.logger.log1(`Deleting session with ID ${session.id}`);
-		if (session.status === SessionStatus.BOUND || session.status === SessionStatus.CONNECTED) {
+		if (session.status === ClientSessionStatus.BOUND || session.status === ClientSessionStatus.CONNECTED) {
 			session.close();
 		}
 		delete this.sessions[btoa(session.url)];
@@ -411,16 +411,16 @@ class HTTPServer {
 	constructor() {
 		app.use(bodyParser.json());
 
-		app.get('/api/sessions', this.getSessions.bind(this));
-		app.post('/api/sessions', this.createSession.bind(this));
-		app.get('/api/sessions/:id', this.getById.bind(this));
-		app.post('/api/sessions/:id/send', this.send.bind(this));
-		app.post('/api/sessions/:id/sendMany', this.sendMany.bind(this));
-		app.delete('/api/sessions/:id/sendMany', this.cancelSendMany.bind(this));
-		app.post('/api/sessions/:id/bind', this.bind.bind(this));
-		app.post('/api/sessions/:id/connect', this.connect.bind(this));
-		app.delete('/api/sessions/:id/connect', this.disconnect.bind(this));
-		app.delete('/api/sessions/:id', this.deleteSession.bind(this));
+		app.get('/api/client', this.getClientSessions.bind(this));
+		app.post('/api/client', this.createClientSession.bind(this));
+		app.get('/api/client/:id', this.getClientSessionById.bind(this));
+		app.post('/api/client/:id/send', this.send.bind(this));
+		app.post('/api/client/:id/sendMany', this.sendMany.bind(this));
+		app.delete('/api/client/:id/sendMany', this.cancelSendMany.bind(this));
+		app.post('/api/client/:id/bind', this.bindClientSession.bind(this));
+		app.post('/api/client/:id/connect', this.connectClientSession.bind(this));
+		app.delete('/api/client/:id/connect', this.disconnectClientSession.bind(this));
+		app.delete('/api/client/:id', this.deleteClientSession.bind(this));
 
 		this.server = app.listen(SERVER_PORT, function() {
 			this.logger.log1(`HTTPServer listening at http://localhost:${SERVER_PORT}`)
@@ -429,19 +429,19 @@ class HTTPServer {
 
 	// TODO: These requests deserve error handling
 
-	getSessions(req, res) {
+	getClientSessions(req, res) {
 		this.logger.log1("Getting sessions");
-		res.send(JSON.stringify(sessionManager.serialize()));
+		res.send(JSON.stringify(clientSessionManager.serialize()));
 	}
 
-	createSession(req, res) {
+	createClientSession(req, res) {
 		this.logger.log1("Creating session");
-		let session = sessionManager.createSession(req.body.url, req.body.username, req.body.password);
+		let session = clientSessionManager.createSession(req.body.url, req.body.username, req.body.password);
 		res.send(JSON.stringify(session.serialize()));
 	}
 
-	getById(req, res) {
-		let session = sessionManager.getSession(req.params.id);
+	getClientSessionById(req, res) {
+		let session = clientSessionManager.getSession(req.params.id);
 		this.logger.log1(`Getting session by ID ${req.params.id}`);
 		if (session) {
 			this.logger.log1(`Session found with ID ${req.params.id}`)
@@ -453,7 +453,7 @@ class HTTPServer {
 	}
 
 	send(req, res) {
-		let session = sessionManager.getSession(req.params.id);
+		let session = clientSessionManager.getSession(req.params.id);
 		let source = req.body.source;
 		let destination = req.body.destination;
 		let message = req.body.message;
@@ -469,7 +469,7 @@ class HTTPServer {
 	}
 
 	sendMany(req, res) {
-		let session = sessionManager.getSession(req.params.id);
+		let session = clientSessionManager.getSession(req.params.id);
 		let source = req.body.source;
 		let destination = req.body.destination;
 		let message = req.body.message;
@@ -492,7 +492,7 @@ class HTTPServer {
 	}
 
 	cancelSendMany(req, res) {
-		let session = sessionManager.getSession(req.params.id);
+		let session = clientSessionManager.getSession(req.params.id);
 		if (!session.busy) {
 			res.status(400).send({
 				                     err: true,
@@ -510,29 +510,32 @@ class HTTPServer {
 		}
 	}
 
-	bind(req, res) {
+	bindClientSession(req, res) {
 		this.logger.log1(`Binding session with ID ${req.params.id}`)
 		// Maybe make this async?
-		let session = sessionManager.getSession(req.params.id);
+		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
 			session.bind()
 				.then(() => res.send(JSON.stringify(session.serialize())))
-				.catch(err => res.status(400).send());
+				.catch(err => res.status(400).send({
+					                                   err: true,
+					                                   msg: err
+				                                   }));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
 			res.status(404).send();
 		}
 	}
 
-	connect(req, res) {
+	connectClientSession(req, res) {
 		this.logger.log1(`Connecting session with ID ${req.params.id}`)
-		let session = sessionManager.getSession(req.params.id);
+		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
 			session.connect()
 				.then(() => res.send(JSON.stringify(session.serialize())))
 				.catch(err => res.status(400).send({
 					                                   err: true,
-					                                   msg: err.message
+					                                   msg: err
 				                                   }));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
@@ -540,15 +543,15 @@ class HTTPServer {
 		}
 	}
 
-	disconnect(req, res) {
+	disconnectClientSession(req, res) {
 		this.logger.log1(`Disconnecting session with ID ${req.params.id}`)
-		let session = sessionManager.getSession(req.params.id);
+		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
 			session.close()
 				.then(() => res.send(JSON.stringify(session.serialize())))
 				.catch(err => res.status(400).send({
 					                                   err: true,
-					                                   msg: err.message
+					                                   msg: err
 				                                   }));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
@@ -556,11 +559,11 @@ class HTTPServer {
 		}
 	}
 
-	deleteSession(req, res) {
+	deleteClientSession(req, res) {
 		this.logger.log1(`Deleting session with ID ${req.params.id}`);
-		let session = sessionManager.getSession(req.params.id);
+		let session = clientSessionManager.getSession(req.params.id);
 		if (session) {
-			sessionManager.deleteSession(session);
+			clientSessionManager.deleteSession(session);
 			res.send();
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
@@ -589,11 +592,11 @@ class WSServer {
 	addClient(ws, sessionId) {
 		if (!this.clients[sessionId]) {
 			this.clients[sessionId] = [];
-			let session = sessionManager.getSession(sessionId);
+			let session = clientSessionManager.getSession(sessionId);
 			if (session) {
-				// session.on(Session.STATUS_CHANGED_EVENT, this.onSessionChange.bind(this, sessionId));
-				// session.on(Session.ANY_PDU_EVENT, this.pduEvent.bind(this, sessionId));
-				session.on(Session.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onMessageSendCounterUpdate.bind(this, sessionId));
+				// session.on(ClientSession.STATUS_CHANGED_EVENT, this.onSessionChange.bind(this, sessionId));
+				// session.on(ClientSession.ANY_PDU_EVENT, this.pduEvent.bind(this, sessionId));
+				session.on(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onMessageSendCounterUpdate.bind(this, sessionId));
 			}
 		}
 		this.logger.log1(`Added client to session ID: ${sessionId}`);
@@ -675,9 +678,9 @@ class WSServer {
 	}
 }
 
-let sessionManager = new SessionManager();
-sessionManager.startup();
-let session = sessionManager.getSession(0);
+let clientSessionManager = new ClientSessionManager();
+clientSessionManager.startup();
+let session = clientSessionManager.getSession(0);
 session.connect().then(() => session.bind());
 new WSServer();
 new HTTPServer();
