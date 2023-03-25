@@ -15,7 +15,7 @@ const CLIENT_SESSIONS_FILE = process.env.CLIENT_SESSIONS_FILE || "client_session
 const CENTER_SESSIONS_FILE = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 const MESSAGE_SEND_UPDATE_DELAY = process.env.MESSAGE_SEND_UPDATE_DELAY || 500;
 
-// TODO: Implement methods on both clients and servers that allows for modification of usernames and passwords
+// TODO: Implement methods on servers that allows for modification of usernames and passwords
 [
 	'debug',
 	'log',
@@ -434,9 +434,9 @@ class CenterSessionStatus {
 
 class CenterSession {
 	// TODO: Currently this center behaves as a DEBUG server, Implement ECHO and DR functionality
-	// TODO: Mgw expects a reply to pdus... implement that
 	// TODO: Currently notify does not work at all, figure out why...
 	// TODO: If the port is in use this throws an exception, catch it and log it
+	// TODO: Implement session overview, they can be closed, destroyed and reconnected
 	eventEmitter = new EventEmitter();
 	busy = false;
 	sessions = [];
@@ -502,6 +502,7 @@ class CenterSession {
 				this.logger.log1(`Connection successful`);
 				session.send(pdu.response());
 				session.resume();
+				session.on('pdu', this.sessionPdu.bind(this, session));
 				this.sessions.push(session);
 				this.setStatus(CenterSessionStatus.CONNECTED);
 				session.on('debug', (type, msg, payload) => {
@@ -522,6 +523,11 @@ class CenterSession {
 		}
 
 		session.on('bind_transceiver', bind_transciever.bind(this));
+	}
+
+	sessionPdu(session, pdu) {
+		// TODO: Implement ECHO and DR functionality
+		session.send(pdu.response());
 	}
 
 	notify(source, destination, message) {
@@ -1113,16 +1119,20 @@ let centerSessionManager = new CenterSessionManager();
 clientSessionManager.startup();
 centerSessionManager.startup();
 
-let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
-let server = centerSessionManager.createSession(7001, 'test', 'test');
+// let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
+// let server = centerSessionManager.createSession(7001, 'test', 'test');
 
 // session.connect()
 // 	.then(() => {
 // 		session.bind().catch(err => console.log(err));
 // 	}).catch(err => console.log(err));
-//
+// //
 // setTimeout(() => session.setUsername("test123"), 2000);
 // setTimeout(() => session.setPassword("test123"), 4000);
+
+// session.on(CenterSession.ANY_PDU_EVENT, (pdu) => {
+// 	console.log(pdu);
+// });
 
 new WSServer();
 new HTTPServer();
