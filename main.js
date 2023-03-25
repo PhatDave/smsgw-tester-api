@@ -440,6 +440,7 @@ class CenterSessionStatus {
 
 // TODO: Implement endpoint for modifying modes
 // TODO: Implement mode modification on centerSession
+// TODO: Implement writing and reading mode from file
 class CenterMode {
 	static DEBUG = "DEBUG";
 	static ECHO = "ECHO";
@@ -463,6 +464,7 @@ class CenterSession {
 	}
 
 	static STATUS_CHANGED_EVENT = "statusChanged";
+	static MODE_CHANGED_EVENT = "modeChanged";
 	static ANY_PDU_EVENT = "*";
 	static MESSAGE_SEND_COUNTER_UPDATE_EVENT = "messageSendCounterUpdate";
 
@@ -502,8 +504,14 @@ class CenterSession {
 		this.refresh();
 	}
 
+	setMode(mode) {
+		this.mode = Object.values(CenterMode)[mode];
+		this.eventEmitter.emit(CenterSession.MODE_CHANGED_EVENT, mode);
+	}
+
 	refresh() {
-		this.close().catch(err => {});
+		this.close().catch(err => {
+		});
 	}
 
 	error(error) {
@@ -738,6 +746,14 @@ class CenterSessionManager {
 			this.logger.log1(`Error loading sessions from ${CLIENT_SESSIONS_FILE}: ${e}`);
 		}
 	}
+
+	getAvailableCenterModes() {
+		let modes = Object.values(CenterMode);
+		return modes.reduce((acc, curr, idx) => {
+			acc[idx] = curr;
+			return acc;
+		}, {});
+	}
 }
 
 class HTTPServer {
@@ -760,6 +776,7 @@ class HTTPServer {
 
 		app.get('/api/center', this.getCenterSessions.bind(this));
 		app.post('/api/center', this.createCenterSession.bind(this));
+		app.get('/api/center/modes', this.getAvailableModes.bind(this));
 		app.get('/api/center/:id', this.getCenterSessionById.bind(this));
 		app.patch('/api/center/:id', this.patchCenterServer.bind(this));
 		app.post('/api/center/:id/send', this.notify.bind(this));
@@ -967,11 +984,19 @@ class HTTPServer {
 			if (!!req.body.password && req.body.password !== server.password) {
 				server.setPassword(req.body.password);
 			}
+			if (!!req.body.mode) {
+				server.setMode(req.body.mode);
+			}
 			res.send(server.serialize());
 		} else {
 			this.logger.log1(`No center server found with ID ${req.params.id}`);
 			res.status(404).send();
 		}
+	}
+
+	getAvailableModes(req, res) {
+		this.logger.log1("Getting available modes");
+		res.send(centerSessionManager.getAvailableCenterModes());
 	}
 
 	notify(req, res) {
