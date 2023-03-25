@@ -345,11 +345,11 @@ class ClientSessionManager {
 
 	constructor() {
 		this.sessions = {};
-		// process.on('exit', this.cleanup.bind(this));
-		// process.on('SIGINT', this.cleanup.bind(this));
-		// process.on('SIGUSR1', this.cleanup.bind(this));
-		// process.on('SIGUSR2', this.cleanup.bind(this));
-		// process.on('uncaughtException', this.cleanup.bind(this));
+		process.on('exit', this.cleanup.bind(this));
+		process.on('SIGINT', this.cleanup.bind(this));
+		process.on('SIGUSR1', this.cleanup.bind(this));
+		process.on('SIGUSR2', this.cleanup.bind(this));
+		process.on('uncaughtException', this.cleanup.bind(this));
 	}
 
 	createSession(url, username, password) {
@@ -417,9 +417,13 @@ class CenterSessionStatus {
 
 class CenterSession {
 	// TODO: Currently this center behaves as a DEBUG server, Implement ECHO and DR functionality
+	// TODO: Mgw expects a reply to pdus... implement that
+	// TODO: Currently notify does not work at all, figure out why...
+	// TODO: If the port is in use this throws an exception, catch it and log it
 	eventEmitter = new EventEmitter();
 	busy = false;
-	session = null;
+	sessions = [];
+	nextSession = 0;
 
 	disconnectingPromise = {
 		promise: null,
@@ -443,7 +447,7 @@ class CenterSession {
 		this.server.on('debug', (type, msg, payload) => {
 			if (type.includes('pdu.')) {
 				this.eventEmitter.emit(msg, payload);
-				this.eventEmitter.emit(ClientSession.ANY_PDU_EVENT, payload);
+				this.eventEmitter.emit(CenterSession.ANY_PDU_EVENT, payload);
 			}
 		});
 		this.server.listen(this.port);
@@ -454,7 +458,7 @@ class CenterSession {
 
 	setStatus(newStatus) {
 		this.status = newStatus;
-		this.eventEmitter.emit(ClientSession.STATUS_CHANGED_EVENT, newStatus);
+		this.eventEmitter.emit(CenterSession.STATUS_CHANGED_EVENT, newStatus);
 	}
 
 	error(error) {
@@ -472,7 +476,6 @@ class CenterSession {
 		this.logger.log1("Center got a connection on port " + this.port);
 		this.setStatus(CenterSessionStatus.CONNECTION_PENDING);
 
-		this.session = session;
 		session.on('error', this.error.bind(this));
 
 		function bind_transciever(pdu) {
@@ -482,11 +485,12 @@ class CenterSession {
 				this.logger.log1(`Connection successful`);
 				session.send(pdu.response());
 				session.resume();
+				this.sessions.push(session);
 				this.setStatus(CenterSessionStatus.CONNECTED);
 				session.on('debug', (type, msg, payload) => {
 					if (type.includes('pdu.')) {
 						this.eventEmitter.emit(msg, payload);
-						this.eventEmitter.emit(ClientSession.ANY_PDU_EVENT, payload);
+						this.eventEmitter.emit(CenterSession.ANY_PDU_EVENT, payload);
 					}
 				});
 			} else {
@@ -511,7 +515,7 @@ class CenterSession {
 				return;
 			}
 			this.logger.log1(`Sending notify message from ${source} to ${destination} with message ${message}`);
-			this.session.submit_sm({
+			this.getNextSession().submit_sm({
 				                       source_addr: source,
 				                       destination_addr: destination,
 				                       short_message: message
@@ -564,6 +568,15 @@ class CenterSession {
 		this.busy = false;
 	}
 
+	getNextSession() {
+		if (this.sessions.length === 0) {
+			return null;
+		}
+		let session = this.sessions[this.nextSession];
+		this.nextSession = (this.nextSession + 1) % this.sessions.length;
+		return session;
+	}
+
 	close() {
 		this.disconnectingPromise.promise = new Promise((resolve, reject) => {
 			if (this.status !== CenterSessionStatus.CONNECTED) {
@@ -571,7 +584,10 @@ class CenterSession {
 				reject(`Cannot close session, no clients bound to ${this.port}`);
 				return;
 			}
-			this.session.close();
+			this.sessions.forEach(session => {
+				session.close();
+			});
+			this.sessions = [];
 			this.setStatus(CenterSessionStatus.WAITING_CONNECTION);
 			resolve();
 		});
@@ -588,7 +604,8 @@ class CenterSession {
 			port: this.port,
 			username: this.username,
 			password: this.password,
-			status: this.status
+			status: this.status,
+			activeSessions: this.sessions.length
 		}
 	}
 
@@ -603,11 +620,11 @@ class CenterSessionManager {
 
 	constructor() {
 		this.servers = {};
-		// process.on('exit', this.cleanup.bind(this));
-		// process.on('SIGINT', this.cleanup.bind(this));
-		// process.on('SIGUSR1', this.cleanup.bind(this));
-		// process.on('SIGUSR2', this.cleanup.bind(this));
-		// process.on('uncaughtException', this.cleanup.bind(this));
+		process.on('exit', this.cleanup.bind(this));
+		process.on('SIGINT', this.cleanup.bind(this));
+		process.on('SIGUSR1', this.cleanup.bind(this));
+		process.on('SIGUSR2', this.cleanup.bind(this));
+		process.on('uncaughtException', this.cleanup.bind(this));
 	}
 
 	createSession(port, username, password) {
@@ -843,12 +860,12 @@ class HTTPServer {
 
 	getCenterSessions(req, res) {
 		this.logger.log1("Getting center sessions");
-		res.send(JSON.stringify(clientSessionManager.serialize()));
+		res.send(JSON.stringify(centerSessionManager.serialize()));
 	}
 
 	createCenterSession(req, res) {
 		this.logger.log1("Creating center session");
-		let session = clientSessionManager.createSession(req.body.port, req.body.username, req.body.password);
+		let session = centerSessionManager.createSession(req.body.port, req.body.username, req.body.password);
 		res.send(JSON.stringify(session.serialize()));
 	}
 
@@ -893,8 +910,8 @@ class HTTPServer {
 		let perSecond = 1 / interval;
 		this.logger.log1(
 			`Sending ${count} notify messages from ${source} to ${destination} with message ${message} on session with ID ${req.params.id} at a rate of ${perSecond} per second.`);
-		if (session) {
-			session.notifyOnInterval(source, destination, message, interval, count)
+		if (server) {
+			server.notifyOnInterval(source, destination, message, interval, count)
 				.then(pdu => res.send(JSON.stringify(pdu)))
 				.catch(err => res.status(400).send(JSON.stringify(err)));
 		} else {
@@ -914,7 +931,7 @@ class HTTPServer {
 		}
 		this.logger.log1(`Cancelling send timer for server with ID ${req.params.id}`);
 		if (server) {
-			server.cancelSendInterval();
+			server.cancelNotifyInterval();
 			res.send();
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
@@ -952,6 +969,8 @@ class HTTPServer {
 }
 
 class WSServer {
+	// TODO: Implement center adding and removing...
+	// TODO: This will probably have to be reworked a little to accommodate centers.
 	clients = {};
 
 	constructor() {
@@ -973,8 +992,8 @@ class WSServer {
 			this.clients[sessionId] = [];
 			let session = clientSessionManager.getSession(sessionId);
 			if (session) {
-				// session.on(ClientSession.STATUS_CHANGED_EVENT, this.onSessionChange.bind(this, sessionId));
-				// session.on(ClientSession.ANY_PDU_EVENT, this.pduEvent.bind(this, sessionId));
+				session.on(ClientSession.STATUS_CHANGED_EVENT, this.onSessionChange.bind(this, sessionId));
+				session.on(ClientSession.ANY_PDU_EVENT, this.pduEvent.bind(this, sessionId));
 				session.on(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onMessageSendCounterUpdate.bind(this, sessionId));
 			}
 		}
@@ -1063,7 +1082,8 @@ clientSessionManager.startup();
 centerSessionManager.startup();
 
 let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
-let server = centerSessionManager.createSession(7001, 'test', 'test');
+// let server = centerSessionManager.createSession(3734, 'test', 'test');
+session.connect().then(() => session.bind());
 
 new WSServer();
 new HTTPServer();
