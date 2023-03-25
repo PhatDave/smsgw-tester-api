@@ -142,7 +142,7 @@ class ClientSession {
 		this.username = username;
 		this.password = password;
 
-		this.logger.log1(`Session created with url ${this.url}, username ${this.username}, password ${this.password} and ID ${this.id}`);
+		this.logger.log1(`Client created with url ${this.url}, username ${this.username}, password ${this.password} and ID ${this.id}`);
 		this.status = ClientSessionStatus.NOT_CONNECTED;
 	}
 
@@ -157,6 +157,7 @@ class ClientSession {
 	}
 
 	refresh() {
+		this.logger.log1(`Refreshing client with url ${this.url} and id ${this.id}`);
 		let status = this.status;
 		this.close();
 		if (status === ClientSessionStatus.CONNECTED) {
@@ -177,11 +178,11 @@ class ClientSession {
 	connect() {
 		this.connectingPromise.promise = new Promise((resolve, reject) => {
 			if (this.status !== ClientSessionStatus.NOT_CONNECTED) {
-				this.logger.log1("ClientSession already connected");
-				reject("ClientSession already connected");
+				this.logger.log1("Client already connected");
+				reject("Client already connected");
 				return;
 			}
-			this.logger.log1("Connecting to " + this.url);
+			this.logger.log1(`Client connecting to ${this.url}`);
 			this.setStatus(ClientSessionStatus.CONNECTING);
 			try {
 				this.session = smpp.connect({
@@ -190,10 +191,10 @@ class ClientSession {
 				                            }, this.connected.bind(this));
 				this.session.on('error', this.error.bind(this));
 			} catch (e) {
-				this.logger.log1("Connection failed to " + this.url);
+				this.logger.log1("Client connection failed to " + this.url);
 				this.setStatus(ClientSessionStatus.NOT_CONNECTED);
 				this.session.close();
-				reject("Connection failed to " + this.url);
+				reject("Client connection failed to " + this.url);
 			}
 			this.connectingPromise.resolve = resolve;
 			this.connectingPromise.reject = reject;
@@ -203,18 +204,18 @@ class ClientSession {
 
 	error(error) {
 		if (error.code === "ETIMEOUT") {
-			this.logger.log1("Connection timed out to " + this.url);
+			this.logger.log1("Client connection timed out to " + this.url);
 		} else if (error.code === "ECONNREFUSED") {
-			this.logger.log1("Connection refused to " + this.url);
+			this.logger.log1("Client connection refused to " + this.url);
 		} else {
-			this.logger.log1("Connection failed to " + this.url);
+			this.logger.log1("Client connection failed to " + this.url);
 		}
 		this.session.close();
 		this.setStatus(ClientSessionStatus.NOT_CONNECTED);
 	}
 
 	connected() {
-		this.logger.log1("Connected to " + this.url);
+		this.logger.log1("Client connected to " + this.url);
 		this.setStatus(ClientSessionStatus.CONNECTED);
 		this.session.on('debug', (type, msg, payload) => {
 			if (type.includes('pdu.')) {
@@ -235,22 +236,22 @@ class ClientSession {
 	bind() {
 		this.bindingPromise.promise = new Promise((resolve, reject) => {
 			if (this.status !== ClientSessionStatus.CONNECTED) {
-				this.logger.log1(`Cannot bind, not connected to ${this.url}`);
-				reject(`Cannot bind, not connected to ${this.url}`);
+				this.logger.log1(`Cannot bind, client not connected to ${this.url}`);
+				reject(`Cannot bind, client not connected to ${this.url}`);
 				return;
 			}
 
 			this.logger.log1("Trying to bind to " + this.url)
 			if (this.status !== ClientSessionStatus.CONNECTED) {
-				this.logger.log1(`Cannot bind, not connected to ${this.url}`);
+				this.logger.log1(`Cannot bind, client not connected to ${this.url}`);
 				return;
 			}
 			if (!!!this.username || !!!this.password) {
-				this.logger.log1(`Cannot bind, username or password not set`);
+				this.logger.log1(`Cannot bind client, username or password not set`);
 				return;
 			}
 			this.setStatus(ClientSessionStatus.BINDING);
-			this.logger.log1(`Binding to ${this.url} with username ${this.username} and password ${this.password}`);
+			this.logger.log1(`Client binding to ${this.url} with username ${this.username} and password ${this.password}`);
 
 			this.session.bind_transceiver({
 				                              system_id: this.username,
@@ -264,11 +265,11 @@ class ClientSession {
 
 	bindReply(pdu) {
 		if (pdu.command_status === 0) {
-			this.logger.log1(`Bound to ${this.url} with username ${this.username} and password ${this.password}`);
+			this.logger.log1(`Client bound to ${this.url} with username ${this.username} and password ${this.password}`);
 			this.setStatus(ClientSessionStatus.BOUND);
 			this.bindingPromise.resolve();
 		} else {
-			this.logger.log1(`Bind failed to ${this.url} with username ${this.username} and password ${this.password}`);
+			this.logger.log1(`Client bind failed to ${this.url} with username ${this.username} and password ${this.password}`);
 			this.setStatus(ClientSessionStatus.CONNECTED);
 			this.bindingPromise.reject();
 		}
@@ -277,11 +278,11 @@ class ClientSession {
 	send(source, destination, message) {
 		return new Promise((resolve, reject) => {
 			if (!this.canSend()) {
-				this.logger.log1(`Cannot send message, not bound to ${this.url} or busy`);
-				reject(`Cannot send message, not bound to ${this.url} or busy`);
+				this.logger.log1(`Client cannot send message, not bound to ${this.url} or busy`);
+				reject(`Client cannot send message, not bound to ${this.url} or busy`);
 				return;
 			}
-			this.logger.log1(`Sending message from ${source} to ${destination} with message ${message}`);
+			this.logger.log1(`Client sending message from ${source} to ${destination} with message ${message}`);
 			this.session.submit_sm({
 				                       source_addr: source,
 				                       destination_addr: destination,
@@ -295,8 +296,8 @@ class ClientSession {
 	sendOnInterval(source, destination, message, interval, count) {
 		return new Promise((resolve, reject) => {
 			if (!this.canSend() || this.busy) {
-				this.logger.log1(`Cannot send many message, not bound to ${this.url} or busy`);
-				reject(`Cannot send many message, not bound to ${this.url} or busy`);
+				this.logger.log1(`Client cannot send many message, not bound to ${this.url} or busy`);
+				reject(`Client cannot send many message, not bound to ${this.url} or busy`);
 				return;
 			}
 			this.busy = true;
@@ -338,8 +339,8 @@ class ClientSession {
 	close() {
 		this.disconnectingPromise.promise = new Promise((resolve, reject) => {
 			if (this.status !== ClientSessionStatus.BOUND && this.status !== ClientSessionStatus.CONNECTED) {
-				this.logger.log1(`Cannot close session, not bound to ${this.url}`);
-				reject(`Cannot close session, not bound to ${this.url}`);
+				this.logger.log1(`Cannot close client, not bound to ${this.url}`);
+				reject(`Cannot close client, not bound to ${this.url}`);
 				return;
 			}
 			this.session.close();
@@ -379,22 +380,22 @@ class ClientSessionManager {
 	createSession(url, username, password) {
 		let urlB64 = btoa(url);
 		if (this.sessions[urlB64]) {
-			this.logger.log1(`Session to ${url} already exists`);
+			this.logger.log1(`Client to ${url} already exists`);
 			return this.sessions[urlB64];
 		}
-		this.logger.log1(`Creating session to ${url} with username ${username} and password ${password}`);
+		this.logger.log1(`Creating client to ${url} with username ${username} and password ${password}`);
 		let session = new ClientSession(this.sessionIdCounter++, url, username, password);
 		this.addSession(session);
 		return session;
 	}
 
 	addSession(session) {
-		this.logger.log1(`Adding session with ID ${session.id}`);
+		this.logger.log1(`Adding client with ID ${session.id}`);
 		this.sessions[btoa(session.url)] = session;
 	}
 
 	deleteSession(session) {
-		this.logger.log1(`Deleting session with ID ${session.id}`);
+		this.logger.log1(`Deleting client with ID ${session.id}`);
 		if (session.status === ClientSessionStatus.BOUND || session.status === ClientSessionStatus.CONNECTED) {
 			session.close();
 		}
@@ -414,7 +415,7 @@ class ClientSessionManager {
 	}
 
 	cleanup() {
-		this.logger.log1(`Saving sessions to ${CLIENT_SESSIONS_FILE}...`);
+		this.logger.log1(`Saving clients to ${CLIENT_SESSIONS_FILE}...`);
 		fs.writeFileSync(CLIENT_SESSIONS_FILE, JSON.stringify(this.serialize(), null, 4));
 	}
 
@@ -422,12 +423,12 @@ class ClientSessionManager {
 		try {
 			let sessions = fs.readFileSync(CLIENT_SESSIONS_FILE);
 			sessions = JSON.parse(sessions);
-			this.logger.log1(`Loaded ${sessions.length} sessions from ${CLIENT_SESSIONS_FILE}...`);
+			this.logger.log1(`Loaded ${sessions.length} clients from ${CLIENT_SESSIONS_FILE}...`);
 			sessions.forEach(session => {
 				this.createSession(session.url, session.username, session.password);
 			});
 		} catch (e) {
-			this.logger.log1(`Error loading sessions from ${CLIENT_SESSIONS_FILE}: ${e}`);
+			this.logger.log1(`Error loading clients from ${CLIENT_SESSIONS_FILE}: ${e}`);
 		}
 	}
 }
@@ -481,7 +482,7 @@ class CenterSession {
 		});
 		this.server.listen(this.port);
 
-		this.logger.log1(`Session created with port ${this.port}, username ${this.username}, password ${this.password} and ID ${this.id}`);
+		this.logger.log1(`Center created with port ${this.port}, username ${this.username}, password ${this.password} and ID ${this.id}`);
 		this.status = CenterSessionStatus.WAITING_CONNECTION;
 	}
 
@@ -512,11 +513,11 @@ class CenterSession {
 
 	error(error) {
 		if (error.code === "ETIMEOUT") {
-			this.logger.log1("Connection timed out to " + this.port);
+			this.logger.log1("Center connection timed out to " + this.port);
 		} else if (error.code === "ECONNREFUSED") {
-			this.logger.log1("Connection refused to " + this.port);
+			this.logger.log1("Center connection refused to " + this.port);
 		} else {
-			this.logger.log1("Connection failed to " + this.port);
+			this.logger.log1("Center connection failed to " + this.port);
 		}
 		this.setStatus(CenterSessionStatus.CONNECTION_PENDING);
 	}
@@ -531,7 +532,7 @@ class CenterSession {
 			this.logger.log1(`Center got a bind_transciever on port ${this.port} with system_id ${pdu.system_id} and password ${pdu.password}`);
 			session.pause();
 			if (pdu.system_id === this.username && pdu.password === this.password) {
-				this.logger.log1(`Connection successful`);
+				this.logger.log1(`Center session connection successful`);
 				session.send(pdu.response());
 				session.resume();
 				session.on('pdu', this.sessionPdu.bind(this, session));
@@ -544,7 +545,7 @@ class CenterSession {
 					}
 				});
 			} else {
-				this.logger.log1(`Connection failed, invalid credentials`);
+				this.logger.log1(`Center session connection failed, invalid credentials`);
 				session.send(pdu.response({
 					                          command_status: smpp.ESME_RBINDFAIL
 				                          }));
@@ -576,8 +577,8 @@ class CenterSession {
 	notify(source, destination, message) {
 		return new Promise((resolve, reject) => {
 			if (!this.canSend()) {
-				this.logger.log1(`Cannot send message, no client connected on ${this.port} or busy`);
-				reject(`Cannot send message, no client connected on ${this.port} or busy`);
+				this.logger.log1(`Center cannot send message, no sessions active on ${this.port} or busy`);
+				reject(`Center cannot send message, no sessions active on ${this.port} or busy`);
 				return;
 			}
 			this.logger.log1(`Sending notify message from ${source} to ${destination} with message ${message}`);
@@ -594,8 +595,8 @@ class CenterSession {
 	notifyOnInterval(source, destination, message, interval, count) {
 		return new Promise((resolve, reject) => {
 			if (!this.canSend() || this.busy) {
-				this.logger.log1(`Cannot send many message, no clients connected to ${this.port} or busy`);
-				reject(`Cannot send many message, no clients connected to ${this.port} or busy`);
+				this.logger.log1(`Center cannot send many message, no sessions active to ${this.port} or busy`);
+				reject(`Center cannot send many message, no sessions active to ${this.port} or busy`);
 				return;
 			}
 			this.busy = true;
@@ -661,6 +662,7 @@ class CenterSession {
 	}
 
 	closeSession(sessionId) {
+		this.logger.log1(`Closing center session ${sessionId}`);
 		let session = this.sessions.find(session => session._id == sessionId);
 		if (!!session) {
 			session.close();
@@ -669,6 +671,7 @@ class CenterSession {
 	}
 
 	deleteSession(sessionId) {
+		this.logger.log1(`Deleting center session ${sessionId}`);
 		let session = this.sessions.find(session => session._id == sessionId);
 		if (!!session) {
 			session.close();
@@ -681,6 +684,7 @@ class CenterSession {
 	}
 
 	addSession(session) {
+		this.logger.log1(`Adding center session ${session._id}`);
 		let sessionInfo = this.mapSession(session);
 		this.eventEmitter.emit(CenterSession.SESSION_CHANGED_EVENT, sessionInfo);
 		this.sessions.push(session);
@@ -689,8 +693,8 @@ class CenterSession {
 	close() {
 		this.disconnectingPromise.promise = new Promise((resolve, reject) => {
 			if (this.status !== CenterSessionStatus.CONNECTED) {
-				this.logger.log1(`Cannot close session, no clients bound to ${this.port}`);
-				reject(`Cannot close session, no clients bound to ${this.port}`);
+				this.logger.log1(`Cannot close center, no sessions active ${this.port}`);
+				reject(`Cannot close center, no sessions active ${this.port}`);
 				return;
 			}
 			this.sessions.forEach(session => {
@@ -744,12 +748,12 @@ class CenterSessionManager {
 	}
 
 	addSession(server) {
-		this.logger.log1(`Adding session with ID ${server.id}`);
+		this.logger.log1(`Adding center with ID ${server.id}`);
 		this.servers[server.port] = server;
 	}
 
 	deleteSession(server) {
-		this.logger.log1(`Deleting server with ID ${server.id}`);
+		this.logger.log1(`Deleting center with ID ${server.id}`);
 		if (server.status === CenterSessionStatus.CONNECTED) {
 			server.close();
 		}
@@ -769,7 +773,7 @@ class CenterSessionManager {
 	}
 
 	cleanup() {
-		this.logger.log1(`Saving sessions to ${CENTER_SESSIONS_FILE}...`);
+		this.logger.log1(`Saving centers to ${CENTER_SESSIONS_FILE}...`);
 		fs.writeFileSync(CENTER_SESSIONS_FILE, JSON.stringify(this.serialize(), null, 4));
 	}
 
@@ -777,7 +781,7 @@ class CenterSessionManager {
 		try {
 			let servers = fs.readFileSync(CENTER_SESSIONS_FILE);
 			servers = JSON.parse(servers);
-			this.logger.log1(`Loaded ${servers.length} sessions from ${CENTER_SESSIONS_FILE}...`);
+			this.logger.log1(`Loaded ${servers.length} centers from ${CENTER_SESSIONS_FILE}...`);
 			servers.forEach(server => {
 				let createdServer = this.createSession(server.port, server.username, server.password);
 				if (!!server.mode) {
@@ -785,7 +789,7 @@ class CenterSessionManager {
 				}
 			});
 		} catch (e) {
-			this.logger.log1(`Error loading sessions from ${CLIENT_SESSIONS_FILE}: ${e}`);
+			this.logger.log1(`Error loading centers from ${CLIENT_SESSIONS_FILE}: ${e}`);
 		}
 	}
 
