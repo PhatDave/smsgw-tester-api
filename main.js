@@ -441,7 +441,6 @@ class CenterSessionStatus {
 
 class CenterSession {
 	// TODO: Currently this center behaves as a DEBUG server, Implement ECHO and DR functionality
-	// TODO: Currently notify does not work at all, figure out why...
 	// TODO: If the port is in use this throws an exception, catch it and log it
 	// TODO: Implement session overview, they can be closed, destroyed and reconnected
 	eventEmitter = new EventEmitter();
@@ -537,10 +536,12 @@ class CenterSession {
 		if (pdu.command === 'submit_sm') {
 			session.send(pdu.response());
 		}
+		if (pdu.command === 'enquire_link') {
+			session.send(pdu.response());
+		}
 	}
 
 	notify(source, destination, message) {
-		// TODO: Fix this
 		return new Promise((resolve, reject) => {
 			if (!this.canSend()) {
 				this.logger.log1(`Cannot send message, no client connected on ${this.port} or busy`);
