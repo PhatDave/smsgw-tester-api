@@ -223,7 +223,14 @@ class ClientSession {
 				this.eventEmitter.emit(ClientSession.ANY_PDU_EVENT, payload);
 			}
 		});
+		this.session.on('pdu', this.sessionPdu.bind(this));
 		this.connectingPromise.resolve();
+	}
+
+	sessionPdu(pdu) {
+		if (pdu.command === 'deliver_sm') {
+			this.session.send(pdu.response());
+		}
 	}
 
 	bind() {
@@ -527,10 +534,13 @@ class CenterSession {
 
 	sessionPdu(session, pdu) {
 		// TODO: Implement ECHO and DR functionality
-		session.send(pdu.response());
+		if (pdu.command === 'submit_sm') {
+			session.send(pdu.response());
+		}
 	}
 
 	notify(source, destination, message) {
+		// TODO: Fix this
 		return new Promise((resolve, reject) => {
 			if (!this.canSend()) {
 				this.logger.log1(`Cannot send message, no client connected on ${this.port} or busy`);
@@ -538,11 +548,11 @@ class CenterSession {
 				return;
 			}
 			this.logger.log1(`Sending notify message from ${source} to ${destination} with message ${message}`);
-			this.getNextSession().submit_sm({
-				                                source_addr: source,
-				                                destination_addr: destination,
-				                                short_message: message
-			                                }, pdu => {
+			this.getNextSession().deliver_sm({
+				                                 source_addr: source,
+				                                 destination_addr: destination,
+				                                 short_message: message
+			                                 }, pdu => {
 				resolve(pdu);
 			});
 		});
@@ -1122,17 +1132,28 @@ centerSessionManager.startup();
 // let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
 // let server = centerSessionManager.createSession(7001, 'test', 'test');
 
+let session = clientSessionManager.getSession(0);
+let server = centerSessionManager.getSession(0);
 // session.connect()
 // 	.then(() => {
-// 		session.bind().catch(err => console.log(err));
+// 		session.bind().then(() => {
+// 			// server.notify('src', 'dst', 'msg');
+// 		}).catch(err => console.log(err));
 // 	}).catch(err => console.log(err));
-// //
+//
 // setTimeout(() => session.setUsername("test123"), 2000);
 // setTimeout(() => session.setPassword("test123"), 4000);
 
 // session.on(CenterSession.ANY_PDU_EVENT, (pdu) => {
 // 	console.log(pdu);
 // });
+
+session.on(ClientSession.ANY_PDU_EVENT, (pdu) => {
+	if (pdu.command.includes('enquire')) {
+		return;
+	}
+	console.log(pdu);
+});
 
 new WSServer();
 new HTTPServer();
@@ -1143,8 +1164,8 @@ function cleanup() {
 	process.exit(0);
 }
 
-process.on('exit', cleanup);
-process.on('SIGINT', cleanup);
-process.on('SIGUSR1', cleanup);
-process.on('SIGUSR2', cleanup);
-process.on('uncaughtException', cleanup);
+// process.on('exit', cleanup);
+// process.on('SIGINT', cleanup);
+// process.on('SIGUSR1', cleanup);
+// process.on('SIGUSR2', cleanup);
+// process.on('uncaughtException', cleanup);
