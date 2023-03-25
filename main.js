@@ -438,9 +438,6 @@ class CenterSessionStatus {
 	static CONNECTION_PENDING = "CONNECTION_PENDING";
 }
 
-// TODO: Implement endpoint for modifying modes
-// TODO: Implement mode modification on centerSession
-// TODO: Implement writing and reading mode from file
 class CenterMode {
 	static DEBUG = "DEBUG";
 	static ECHO = "ECHO";
@@ -448,7 +445,6 @@ class CenterMode {
 }
 
 class CenterSession {
-	// TODO: Currently this center behaves as a DEBUG server, Implement ECHO and DR functionality
 	// TODO: If the port is in use this throws an exception, catch it and log it
 	// TODO: Implement session overview, they can be closed, destroyed and reconnected
 	eventEmitter = new EventEmitter();
@@ -740,7 +736,10 @@ class CenterSessionManager {
 			servers = JSON.parse(servers);
 			this.logger.log1(`Loaded ${servers.length} sessions from ${CENTER_SESSIONS_FILE}...`);
 			servers.forEach(server => {
-				this.createSession(server.port, server.username, server.password);
+				let createdServer = this.createSession(server.port, server.username, server.password);
+				if (!!server.mode) {
+					createdServer.mode = server.mode;
+				}
 			});
 		} catch (e) {
 			this.logger.log1(`Error loading sessions from ${CLIENT_SESSIONS_FILE}: ${e}`);
