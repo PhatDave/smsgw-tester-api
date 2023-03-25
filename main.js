@@ -521,48 +521,48 @@ class CenterSession {
 		});
 	}
 
-	// notifyOnInterval(source, destination, message, interval, count) {
-	// 	return new Promise((resolve, reject) => {
-	// 		if (!this.canSend() || this.busy) {
-	// 			this.logger.log1(`Cannot send many message, not bound to ${this.url} or busy`);
-	// 			reject(`Cannot send many message, not bound to ${this.url} or busy`);
-	// 			return;
-	// 		}
-	// 		this.busy = true;
-	// 		this.timer = new NanoTimer();
-	// 		let counter = 0;
-	// 		let previousUpdateCounter = 0;
-	//
-	// 		this.updateTimer = new NanoTimer();
-	// 		this.updateTimer.setInterval(() => {
-	// 			if (previousUpdateCounter !== counter) {
-	// 				this.eventEmitter.emit(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
-	// 				previousUpdateCounter = counter;
-	// 			}
-	// 		}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
-	//
-	// 		this.timer.setInterval(() => {
-	// 			if (count > 0 && counter >= count) {
-	// 				this.cancelNotifyInterval();
-	// 			} else {
-	// 				this.notify(source, destination, message)
-	// 					.catch(e => this.logger.log1(`Error sending message: ${e}`));
-	// 				counter++;
-	// 			}
-	// 		}, '', `${interval} s`);
-	// 		resolve();
-	// 	});
-	// }
+	notifyOnInterval(source, destination, message, interval, count) {
+		return new Promise((resolve, reject) => {
+			if (!this.canSend() || this.busy) {
+				this.logger.log1(`Cannot send many message, no clients connected to ${this.port} or busy`);
+				reject(`Cannot send many message, no clients connected to ${this.port} or busy`);
+				return;
+			}
+			this.busy = true;
+			this.timer = new NanoTimer();
+			let counter = 0;
+			let previousUpdateCounter = 0;
 
-	// cancelNotifyInterval() {
-	// 	if (!!this.timer) {
-	// 		this.timer.clearInterval();
-	// 		this.updateTimer.clearInterval();
-	// 		this.timer = null;
-	// 		this.updateTimer = null;
-	// 	}
-	// 	this.busy = false;
-	// }
+			this.updateTimer = new NanoTimer();
+			this.updateTimer.setInterval(() => {
+				if (previousUpdateCounter !== counter) {
+					this.eventEmitter.emit(CenterSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
+					previousUpdateCounter = counter;
+				}
+			}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
+
+			this.timer.setInterval(() => {
+				if (count > 0 && counter >= count) {
+					this.cancelNotifyInterval();
+				} else {
+					this.notify(source, destination, message)
+						.catch(e => this.logger.log1(`Error sending message: ${e}`));
+					counter++;
+				}
+			}, '', `${interval} s`);
+			resolve();
+		});
+	}
+
+	cancelNotifyInterval() {
+		if (!!this.timer) {
+			this.timer.clearInterval();
+			this.updateTimer.clearInterval();
+			this.timer = null;
+			this.updateTimer = null;
+		}
+		this.busy = false;
+	}
 
 	close() {
 		this.disconnectingPromise.promise = new Promise((resolve, reject) => {
@@ -865,15 +865,61 @@ class HTTPServer {
 	}
 
 	notify(req, res) {
-		return undefined;
+		let server = centerSessionManager.getSession(req.params.id);
+		let source = req.body.source;
+		let destination = req.body.destination;
+		let message = req.body.message;
+		this.logger.log1(`Sending notify message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
+		if (server) {
+			server.notify(source, destination, message)
+				.then(pdu => res.send(JSON.stringify(pdu)))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
 	}
 
 	notifyMany(req, res) {
-		return undefined;
+		let server = centerSessionManager.getSession(req.params.id);
+		let source = req.body.source;
+		let destination = req.body.destination;
+		let message = req.body.message;
+		let interval = req.body.interval / 1000;
+		let count = req.body.count;
+		if (!!req.body.perSecond) {
+			interval = 1 / req.body.perSecond;
+		}
+		let perSecond = 1 / interval;
+		this.logger.log1(
+			`Sending ${count} notify messages from ${source} to ${destination} with message ${message} on session with ID ${req.params.id} at a rate of ${perSecond} per second.`);
+		if (session) {
+			session.notifyOnInterval(source, destination, message, interval, count)
+				.then(pdu => res.send(JSON.stringify(pdu)))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
 	}
 
 	cancelNotifyMany(req, res) {
-		return undefined;
+		let server = centerSessionManager.getSession(req.params.id);
+		if (!server.busy) {
+			res.status(400).send({
+				                     err: true,
+				                     msg: `Session with ID ${req.params.id} is not sending messages`
+			                     });
+			return;
+		}
+		this.logger.log1(`Cancelling send timer for server with ID ${req.params.id}`);
+		if (server) {
+			server.cancelSendInterval();
+			res.send();
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
 	}
 
 	disconnectCenterSession(req, res) {
