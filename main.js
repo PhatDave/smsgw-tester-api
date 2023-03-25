@@ -1170,8 +1170,6 @@ class HTTPServer {
 }
 
 class WSServer {
-	// TODO: Implement center adding and removing...
-	// TODO: This will probably have to be reworked a little to accommodate centers.
 	clients = {};
 	unknownClients = [];
 
@@ -1241,17 +1239,22 @@ class WSServer {
 	}
 
 	removeClient(ws) {
-		// TODO: Fix this
-		for (let sessionId in this.clients) {
-			let index = this.clients[sessionId].indexOf(ws);
+		this.clients.client = this.removeFromArray(this.clients.client, ws);
+		this.clients.center = this.removeFromArray(this.clients.center, ws);
+	}
+
+	removeFromArray(array, element) {
+		for (let sessionId in array) {
+			let index = array[sessionId].indexOf(element);
 			if (index > -1) {
-				delete this.clients[sessionId][index];
+				delete array[sessionId][index];
 			}
-			this.clients[sessionId] = this.clients[sessionId].filter(Boolean);
-			if (this.clients[sessionId].length === 0) {
-				delete this.clients[sessionId];
+			array[sessionId] = array[sessionId].filter(Boolean);
+			if (array[sessionId].length === 0) {
+				delete array[sessionId];
 			}
 		}
+		return array;
 	}
 
 	onClientSessionStatusChange(sessionId, newStatus) {
