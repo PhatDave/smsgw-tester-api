@@ -1173,6 +1173,7 @@ class WSServer {
 	// TODO: Implement center adding and removing...
 	// TODO: This will probably have to be reworked a little to accommodate centers.
 	clients = {};
+	unknownClients = [];
 
 	constructor() {
 		this.server = new WebSocket.Server({port: WS_SERVER_PORT});
@@ -1183,33 +1184,54 @@ class WSServer {
 
 	onConnection(ws) {
 		this.logger.log1("New connection");
-		this.addClient(ws, -1);
+		this.unknownClients.push(ws);
 		ws.on('message', this.onMessage.bind(this, ws));
 		ws.on('close', this.onClose.bind(this, ws));
 	}
 
-	addClient(ws, sessionId) {
-		if (!this.clients[sessionId]) {
-			this.clients[sessionId] = [];
+	addClient(ws, type, sessionId) {
+		if (!this.clients[type]) {
+			this.clients[type] = {};
+		}
+		if (!this.clients[type][sessionId]) {
+			this.clients[type][sessionId] = [];
+		}
+
+		if (type === "client") {
 			let session = clientSessionManager.getSession(sessionId);
-			if (session) {
-				session.on(ClientSession.STATUS_CHANGED_EVENT, this.onSessionChange.bind(this, sessionId));
-				session.on(ClientSession.ANY_PDU_EVENT, this.pduEvent.bind(this, sessionId));
-				session.on(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onMessageSendCounterUpdate.bind(this, sessionId));
+			if (!!session) {
+				session.on(ClientSession.STATUS_CHANGED_EVENT, this.onClientSessionStatusChange.bind(this, sessionId));
+				session.on(ClientSession.ANY_PDU_EVENT, this.onClientSessionPdu.bind(this, sessionId));
+				session.on(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onClientMessageCounterUpdate.bind(this, sessionId));
+			}
+		} else if (type === "center") {
+			let session = centerSessionManager.getSession(sessionId);
+			if (!!session) {
+				session.on(CenterSession.STATUS_CHANGED_EVENT, this.onCenterStatusChange.bind(this, sessionId));
+				session.on(CenterSession.ANY_PDU_EVENT, this.onCenterServerPdu.bind(this, sessionId));
+				session.on(CenterSession.MODE_CHANGED_EVENT, this.onCenterModeChanged.bind(this, sessionId));
+				session.on(CenterSession.SESSION_CHANGED_EVENT, this.onCenterSessionsChanged.bind(this, sessionId));
+				session.on(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onCenterMessageCounterUpdate.bind(this, sessionId));
 			}
 		}
-		this.logger.log1(`Added client to session ID: ${sessionId}`);
-		this.clients[sessionId].push(ws);
-		this.logger.log1(`Now active ${this.clients[sessionId].length} clients in session ID: ${sessionId}`);
+
+		this.clients[type][sessionId].push(ws);
+		this.logger.log1(`Now active ${this.clients[type][sessionId].length} clients in session ID: ${sessionId} of type ${type}`);
 	}
 
 	onMessage(ws, message) {
 		this.logger.log1("New message");
-		let sessionId = String(message);
-		this.logger.log1(`Moving client to session ID: ${sessionId}`);
-		this.removeClient(ws);
-		this.addClient(ws, sessionId);
-		this.logger.log1(`Now active ${this.clients[sessionId].length} clients in session ID: ${sessionId}`);
+		message = String(message);
+		let data = message.split(":");
+		let type = data[0];
+		let sessionId = data[1];
+
+		this.logger.log1(`Moving client to session ID: ${sessionId} of type ${type}`);
+		delete this.unknownClients[ws];
+		this.unknownClients = this.unknownClients.filter(Boolean);
+
+		this.addClient(ws, type, sessionId);
+		this.logger.log1(`Now active ${this.clients[type][sessionId].length} clients in session ID: ${sessionId} of type ${type}`);
 	}
 
 	onClose(ws) {
@@ -1219,6 +1241,7 @@ class WSServer {
 	}
 
 	removeClient(ws) {
+		// TODO: Fix this
 		for (let sessionId in this.clients) {
 			let index = this.clients[sessionId].indexOf(ws);
 			if (index > -1) {
@@ -1231,14 +1254,15 @@ class WSServer {
 		}
 	}
 
-	onSessionChange(sessionId, newStatus) {
+	onClientSessionStatusChange(sessionId, newStatus) {
 		this.logger.log1(`Session with ID ${sessionId} changed`);
 		let payload = {
+			objectType: "client",
 			type: 'status',
 			sessionId: sessionId,
 			value: newStatus
 		}
-		let clients = this.clients[sessionId];
+		let clients = this.clients["client"][sessionId];
 		if (!!clients) {
 			this.logger.log1(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
 			clients.forEach(client => {
@@ -1247,11 +1271,12 @@ class WSServer {
 		}
 	}
 
-	pduEvent(sessionId, pdu) {
-		let clients = this.clients[sessionId];
+	onClientSessionPdu(sessionId, pdu) {
+		let clients = this.clients["client"][sessionId];
 		if (!!clients) {
 			this.logger.log2(`Session with ID ${sessionId} fired PDU`);
 			let payload = {
+				objectType: "client",
 				type: 'pdu',
 				sessionId: sessionId,
 				value: pdu
@@ -1263,14 +1288,101 @@ class WSServer {
 		}
 	}
 
-	onMessageSendCounterUpdate(sessionId, counter) {
+	onClientMessageCounterUpdate(sessionId, counter) {
 		this.logger.log2(`Session with ID ${sessionId} updating message send counter`);
 		let payload = {
+			objectType: "client",
 			type: 'counterUpdate',
 			sessionId: sessionId,
 			value: counter
 		}
-		let clients = this.clients[sessionId];
+		let clients = this.clients["client"][sessionId];
+		if (!!clients) {
+			this.logger.log2(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
+			clients.forEach(client => {
+				client.send(JSON.stringify(payload));
+			});
+		}
+	}
+
+	onCenterStatusChange(sessionId, newStatus) {
+		this.logger.log1(`Session with ID ${sessionId} changed`);
+		let payload = {
+			objectType: "center",
+			type: 'status',
+			sessionId: sessionId,
+			value: newStatus
+		}
+		let clients = this.clients["center"][sessionId];
+		if (!!clients) {
+			this.logger.log1(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
+			clients.forEach(client => {
+				client.send(JSON.stringify(payload));
+			});
+		}
+	}
+
+	onCenterServerPdu(sessionId, pdu) {
+		let clients = this.clients["center"][sessionId];
+		if (!!clients) {
+			this.logger.log2(`Session with ID ${sessionId} fired PDU`);
+			let payload = {
+				objectType: "center",
+				type: 'pdu',
+				sessionId: sessionId,
+				value: pdu
+			}
+			this.logger.log2(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
+			clients.forEach(client => {
+				client.send(JSON.stringify(payload));
+			});
+		}
+	}
+
+	onCenterModeChanged(sessionId, newMode) {
+		this.logger.log1(`Session with ID ${sessionId} changed`);
+		let payload = {
+			objectType: "center",
+			type: 'mode',
+			sessionId: sessionId,
+			value: newMode,
+			text: CenterMode[newMode]
+		}
+		let clients = this.clients["center"][sessionId];
+		if (!!clients) {
+			this.logger.log1(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
+			clients.forEach(client => {
+				client.send(JSON.stringify(payload));
+			});
+		}
+	}
+
+	onCenterSessionsChanged(sessionId, newSession) {
+		this.logger.log1(`Session with ID ${sessionId} changed`);
+		let payload = {
+			objectType: "center",
+			type: 'sessions',
+			sessionId: sessionId,
+			value: newSession
+		}
+		let clients = this.clients["center"][sessionId];
+		if (!!clients) {
+			this.logger.log1(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
+			clients.forEach(client => {
+				client.send(JSON.stringify(payload));
+			});
+		}
+	}
+
+	onCenterMessageCounterUpdate(sessionId, counter) {
+		this.logger.log2(`Session with ID ${sessionId} updating message send counter`);
+		let payload = {
+			objectType: "center",
+			type: 'counterUpdate',
+			sessionId: sessionId,
+			value: counter
+		}
+		let clients = this.clients["center"][sessionId];
 		if (!!clients) {
 			this.logger.log2(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
 			clients.forEach(client => {
