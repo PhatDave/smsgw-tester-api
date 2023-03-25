@@ -446,7 +446,6 @@ class CenterMode {
 
 class CenterSession {
 	// TODO: If the port is in use this throws an exception, catch it and log it
-	// TODO: Implement session overview, they can be closed, destroyed and reconnected
 	eventEmitter = new EventEmitter();
 	busy = false;
 	sessions = [];
@@ -461,6 +460,7 @@ class CenterSession {
 
 	static STATUS_CHANGED_EVENT = "statusChanged";
 	static MODE_CHANGED_EVENT = "modeChanged";
+	static SESSION_CHANGED_EVENT = "sessionChanged";
 	static ANY_PDU_EVENT = "*";
 	static MESSAGE_SEND_COUNTER_UPDATE_EVENT = "messageSendCounterUpdate";
 
@@ -535,7 +535,7 @@ class CenterSession {
 				session.send(pdu.response());
 				session.resume();
 				session.on('pdu', this.sessionPdu.bind(this, session));
-				this.sessions.push(session);
+				this.addSession(session);
 				this.setStatus(CenterSessionStatus.CONNECTED);
 				session.on('debug', (type, msg, payload) => {
 					if (type.includes('pdu.')) {
@@ -641,6 +641,49 @@ class CenterSession {
 		let session = this.sessions[this.nextSession];
 		this.nextSession = (this.nextSession + 1) % this.sessions.length;
 		return session;
+	}
+
+	getSessions() {
+		return this.sessions.map(session => {
+			return this.mapSession(session);
+		})
+	}
+
+	mapSession(session) {
+		return {
+			closed: session.closed,
+			paused: session.paused,
+			remoteAddress: session.remoteAddress,
+			remotePort: session.remotePort,
+			_id: session._id,
+			deleted: session.deleted || false
+		}
+	}
+
+	closeSession(sessionId) {
+		let session = this.sessions.find(session => session._id == sessionId);
+		if (!!session) {
+			session.close();
+			this.eventEmitter.emit(CenterSession.SESSION_CHANGED_EVENT, this.mapSession(session));
+		}
+	}
+
+	deleteSession(sessionId) {
+		let session = this.sessions.find(session => session._id == sessionId);
+		if (!!session) {
+			session.close();
+			session.destroy();
+			session.deleted = true;
+			this.eventEmitter.emit(CenterSession.SESSION_CHANGED_EVENT, this.mapSession(session));
+			delete this.sessions[this.sessions.indexOf(session)];
+			this.sessions = this.sessions.filter(Boolean);
+		}
+	}
+
+	addSession(session) {
+		let sessionInfo = this.mapSession(session);
+		this.eventEmitter.emit(CenterSession.SESSION_CHANGED_EVENT, sessionInfo);
+		this.sessions.push(session);
 	}
 
 	close() {
@@ -776,7 +819,10 @@ class HTTPServer {
 		app.get('/api/center', this.getCenterSessions.bind(this));
 		app.post('/api/center', this.createCenterSession.bind(this));
 		app.get('/api/center/modes', this.getAvailableModes.bind(this));
-		app.get('/api/center/:id', this.getCenterSessionById.bind(this));
+		app.get('/api/center/:id', this.getCenterServerById.bind(this));
+		app.get('/api/center/:id/session', this.getCenterServerSessionsById.bind(this));
+		app.delete('/api/center/:id/session/:sessionId', this.closeCenterServerSessionById.bind(this));
+		app.delete('/api/center/:id/session/:sessionId/destroy', this.deleteCenterServerSessionById.bind(this));
 		app.patch('/api/center/:id', this.patchCenterServer.bind(this));
 		app.post('/api/center/:id/send', this.notify.bind(this));
 		app.post('/api/center/:id/sendMany', this.notifyMany.bind(this));
@@ -961,12 +1007,50 @@ class HTTPServer {
 		res.send(session.serialize());
 	}
 
-	getCenterSessionById(req, res) {
+	getCenterServerById(req, res) {
 		let session = centerSessionManager.getSession(req.params.id);
 		this.logger.log1(`Getting center session by ID ${req.params.id}`);
 		if (session) {
 			this.logger.log1(`Center session found with ID ${req.params.id}`)
 			res.send(session.serialize());
+		} else {
+			this.logger.log1(`No center session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	getCenterServerSessionsById(req, res) {
+		let server = centerSessionManager.getSession(req.params.id);
+		this.logger.log1(`Getting center session by ID ${req.params.id}`);
+		if (server) {
+			this.logger.log1(`Center session found with ID ${req.params.id}`)
+			res.send(server.getSessions());
+		} else {
+			this.logger.log1(`No center session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	closeCenterServerSessionById(req, res) {
+		let server = centerSessionManager.getSession(req.params.id);
+		this.logger.log1(`Getting center session by ID ${req.params.id}`);
+		if (server) {
+			this.logger.log1(`Center session found with ID ${req.params.id}`)
+			server.closeSession(req.params.sessionId)
+			res.send();
+		} else {
+			this.logger.log1(`No center session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	deleteCenterServerSessionById(req, res) {
+		let server = centerSessionManager.getSession(req.params.id);
+		this.logger.log1(`Getting center session by ID ${req.params.id}`);
+		if (server) {
+			this.logger.log1(`Center session found with ID ${req.params.id}`)
+			server.deleteSession(req.params.sessionId)
+			res.send();
 		} else {
 			this.logger.log1(`No center session found with ID ${req.params.id}`);
 			res.status(404).send();
