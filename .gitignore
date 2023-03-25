@@ -2,3 +2,4 @@
 node_modules
 package-lock.json
 sessions.json
+client_sessions.json

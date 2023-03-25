@@ -516,10 +516,10 @@ class CenterSession {
 			}
 			this.logger.log1(`Sending notify message from ${source} to ${destination} with message ${message}`);
 			this.getNextSession().submit_sm({
-				                       source_addr: source,
-				                       destination_addr: destination,
-				                       short_message: message
-			                       }, pdu => {
+				                                source_addr: source,
+				                                destination_addr: destination,
+				                                short_message: message
+			                                }, pdu => {
 				resolve(pdu);
 			});
 		});
@@ -1024,6 +1024,9 @@ class WSServer {
 				delete this.clients[sessionId][index];
 			}
 			this.clients[sessionId] = this.clients[sessionId].filter(Boolean);
+			if (this.clients[sessionId].length === 0) {
+				delete this.clients[sessionId];
+			}
 		}
 	}
 
@@ -1044,14 +1047,14 @@ class WSServer {
 	}
 
 	pduEvent(sessionId, pdu) {
-		this.logger.log2(`Session with ID ${sessionId} fired PDU`);
-		let payload = {
-			type: 'pdu',
-			sessionId: sessionId,
-			value: pdu
-		}
 		let clients = this.clients[sessionId];
 		if (!!clients) {
+			this.logger.log2(`Session with ID ${sessionId} fired PDU`);
+			let payload = {
+				type: 'pdu',
+				sessionId: sessionId,
+				value: pdu
+			}
 			this.logger.log2(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
 			clients.forEach(client => {
 				client.send(JSON.stringify(payload));
