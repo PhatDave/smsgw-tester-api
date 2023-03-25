@@ -15,7 +15,6 @@ const CLIENT_SESSIONS_FILE = process.env.CLIENT_SESSIONS_FILE || "client_session
 const CENTER_SESSIONS_FILE = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 const MESSAGE_SEND_UPDATE_DELAY = process.env.MESSAGE_SEND_UPDATE_DELAY || 500;
 
-// TODO: Implement methods on servers that allows for modification of usernames and passwords
 [
 	'debug',
 	'log',
@@ -493,6 +492,20 @@ class CenterSession {
 		this.eventEmitter.emit(CenterSession.STATUS_CHANGED_EVENT, newStatus);
 	}
 
+	setUsername(username) {
+		this.username = username;
+		this.refresh();
+	}
+
+	setPassword(password) {
+		this.password = password;
+		this.refresh();
+	}
+
+	refresh() {
+		this.close().catch(err => {});
+	}
+
 	error(error) {
 		if (error.code === "ETIMEOUT") {
 			this.logger.log1("Connection timed out to " + this.port);
@@ -748,6 +761,7 @@ class HTTPServer {
 		app.get('/api/center', this.getCenterSessions.bind(this));
 		app.post('/api/center', this.createCenterSession.bind(this));
 		app.get('/api/center/:id', this.getCenterSessionById.bind(this));
+		app.patch('/api/center/:id', this.patchCenterServer.bind(this));
 		app.post('/api/center/:id/send', this.notify.bind(this));
 		app.post('/api/center/:id/sendMany', this.notifyMany.bind(this));
 		app.delete('/api/center/:id/sendMany', this.cancelNotifyMany.bind(this));
@@ -939,6 +953,23 @@ class HTTPServer {
 			res.send(session.serialize());
 		} else {
 			this.logger.log1(`No center session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	patchCenterServer(req, res) {
+		let server = centerSessionManager.getSession(req.params.id);
+		if (server) {
+			this.logger.log1(`Center server found with ID ${req.params.id}`)
+			if (!!req.body.username && req.body.username !== server.username) {
+				server.setUsername(req.body.username);
+			}
+			if (!!req.body.password && req.body.password !== server.password) {
+				server.setPassword(req.body.password);
+			}
+			res.send(server.serialize());
+		} else {
+			this.logger.log1(`No center server found with ID ${req.params.id}`);
 			res.status(404).send();
 		}
 	}
