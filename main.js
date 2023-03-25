@@ -11,7 +11,8 @@ const WebSocket = require("ws");
 
 const SERVER_PORT = process.env.SERVER_PORT || 8190;
 const WS_SERVER_PORT = process.env.WS_SERVER_PORT || 8191;
-const SESSIONS_FILE = process.env.SESSIONS_FILE || "sessions.json";
+const CLIENT_SESSIONS_FILE = process.env.CLIENT_SESSIONS_FILE || "client_sessions.json";
+const CENTER_SESSIONS_FILE = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 const MESSAGE_SEND_UPDATE_DELAY = process.env.MESSAGE_SEND_UPDATE_DELAY || 500;
 
 
@@ -102,14 +103,10 @@ class Logger {
 let logger = new Logger("main");
 
 class ClientSessionStatus {
-	static OK = "OK";
 	static CONNECTING = "CONNECTING";
 	static CONNECTED = "CONNECTED";
 	static BINDING = "BINDING";
 	static BOUND = "BOUND";
-	static READY = "READY";
-	static CONNECT_FAILED = "CONNECT_FAILED";
-	static BIND_FAILED = "BIND_FAILED";
 	static NOT_CONNECTED = "NOT_CONNECTED";
 }
 
@@ -140,7 +137,7 @@ class ClientSession {
 
 	constructor(id, url, username, password) {
 		this.id = id;
-		this.logger = new Logger(`Session-${this.id}`);
+		this.logger = new Logger(`ClientSession-${this.id}`);
 		this.url = url;
 
 		this.username = username;
@@ -169,10 +166,11 @@ class ClientSession {
 					                            url: this.url,
 					                            auto_enquire_link_period: this.auto_enquire_link_period,
 				                            }, this.connected.bind(this));
-				this.session.on('error', this.clientError.bind(this));
+				this.session.on('error', this.error.bind(this));
 			} catch (e) {
 				this.logger.log1("Connection failed to " + this.url);
-				this.setStatus(ClientSessionStatus.CONNECT_FAILED);
+				this.setStatus(ClientSessionStatus.NOT_CONNECTED);
+				this.session.close();
 				reject("Connection failed to " + this.url);
 			}
 			this.connectingPromise.resolve = resolve;
@@ -181,7 +179,7 @@ class ClientSession {
 		return this.connectingPromise.promise;
 	}
 
-	clientError(error) {
+	error(error) {
 		if (error.code === "ETIMEOUT") {
 			this.logger.log1("Connection timed out to " + this.url);
 		} else if (error.code === "ECONNREFUSED") {
@@ -189,6 +187,8 @@ class ClientSession {
 		} else {
 			this.logger.log1("Connection failed to " + this.url);
 		}
+		this.session.close();
+		this.setStatus(ClientSessionStatus.NOT_CONNECTED);
 	}
 
 	connected() {
@@ -199,7 +199,7 @@ class ClientSession {
 				this.eventEmitter.emit(msg, payload);
 				this.eventEmitter.emit(ClientSession.ANY_PDU_EVENT, payload);
 			}
-		})
+		});
 		this.connectingPromise.resolve();
 	}
 
@@ -240,7 +240,7 @@ class ClientSession {
 			this.bindingPromise.resolve();
 		} else {
 			this.logger.log1(`Bind failed to ${this.url} with username ${this.username} and password ${this.password}`);
-			this.setStatus(ClientSessionStatus.BIND_FAILED);
+			this.setStatus(ClientSessionStatus.CONNECTED);
 			this.bindingPromise.reject();
 		}
 	}
@@ -390,15 +390,15 @@ class ClientSessionManager {
 	}
 
 	cleanup() {
-		this.logger.log1(`Saving sessions to ${SESSIONS_FILE}...`);
-		fs.writeFileSync(SESSIONS_FILE, JSON.stringify(this.serialize(), null, 4));
+		this.logger.log1(`Saving sessions to ${CLIENT_SESSIONS_FILE}...`);
+		fs.writeFileSync(CLIENT_SESSIONS_FILE, JSON.stringify(this.serialize(), null, 4));
 		process.exit(0);
 	}
 
 	startup() {
-		let sessions = fs.readFileSync(SESSIONS_FILE);
+		let sessions = fs.readFileSync(CLIENT_SESSIONS_FILE);
 		sessions = JSON.parse(sessions);
-		this.logger.log1(`Loaded ${sessions.length} sessions from ${SESSIONS_FILE}...`);
+		this.logger.log1(`Loaded ${sessions.length} sessions from ${CLIENT_SESSIONS_FILE}...`);
 		sessions.forEach(session => {
 			this.createSession(session.url, session.username, session.password);
 		})
