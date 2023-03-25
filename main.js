@@ -345,11 +345,6 @@ class ClientSessionManager {
 
 	constructor() {
 		this.sessions = {};
-		process.on('exit', this.cleanup.bind(this));
-		process.on('SIGINT', this.cleanup.bind(this));
-		process.on('SIGUSR1', this.cleanup.bind(this));
-		process.on('SIGUSR2', this.cleanup.bind(this));
-		process.on('uncaughtException', this.cleanup.bind(this));
 	}
 
 	createSession(url, username, password) {
@@ -392,7 +387,6 @@ class ClientSessionManager {
 	cleanup() {
 		this.logger.log1(`Saving sessions to ${CLIENT_SESSIONS_FILE}...`);
 		fs.writeFileSync(CLIENT_SESSIONS_FILE, JSON.stringify(this.serialize(), null, 4));
-		process.exit(0);
 	}
 
 	startup() {
@@ -620,11 +614,6 @@ class CenterSessionManager {
 
 	constructor() {
 		this.servers = {};
-		process.on('exit', this.cleanup.bind(this));
-		process.on('SIGINT', this.cleanup.bind(this));
-		process.on('SIGUSR1', this.cleanup.bind(this));
-		process.on('SIGUSR2', this.cleanup.bind(this));
-		process.on('uncaughtException', this.cleanup.bind(this));
 	}
 
 	createSession(port, username, password) {
@@ -666,7 +655,6 @@ class CenterSessionManager {
 	cleanup() {
 		this.logger.log1(`Saving sessions to ${CENTER_SESSIONS_FILE}...`);
 		fs.writeFileSync(CENTER_SESSIONS_FILE, JSON.stringify(this.serialize(), null, 4));
-		process.exit(0);
 	}
 
 	startup() {
@@ -1090,3 +1078,15 @@ session.connect().then(() => session.bind());
 
 new WSServer();
 new HTTPServer();
+
+function cleanup() {
+	clientSessionManager.cleanup();
+	centerSessionManager.cleanup();
+	process.exit(0);
+}
+
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGUSR1', cleanup);
+process.on('SIGUSR2', cleanup);
+process.on('uncaughtException', cleanup);
