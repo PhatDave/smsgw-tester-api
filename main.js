@@ -1403,8 +1403,8 @@ centerSessionManager.startup();
 // let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
 // let server = centerSessionManager.createSession(7001, 'test', 'test');
 
-let session = clientSessionManager.getSession(0);
-let server = centerSessionManager.getSession(0);
+// let session = clientSessionManager.getSession(0);
+// let server = centerSessionManager.getSession(0);
 
 // session.connect()
 // 	.then(() => {
@@ -1436,8 +1436,8 @@ function cleanup() {
 	process.exit(0);
 }
 
-// process.on('exit', cleanup);
-// process.on('SIGINT', cleanup);
-// process.on('SIGUSR1', cleanup);
-// process.on('SIGUSR2', cleanup);
-// process.on('uncaughtException', cleanup);
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGUSR1', cleanup);
+process.on('SIGUSR2', cleanup);
+process.on('uncaughtException', cleanup);
