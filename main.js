@@ -439,6 +439,14 @@ class CenterSessionStatus {
 	static CONNECTION_PENDING = "CONNECTION_PENDING";
 }
 
+// TODO: Implement endpoint for modifying modes
+// TODO: Implement mode modification on centerSession
+class CenterMode {
+	static DEBUG = "DEBUG";
+	static ECHO = "ECHO";
+	static DR = "DR";
+}
+
 class CenterSession {
 	// TODO: Currently this center behaves as a DEBUG server, Implement ECHO and DR functionality
 	// TODO: If the port is in use this throws an exception, catch it and log it
@@ -447,6 +455,7 @@ class CenterSession {
 	busy = false;
 	sessions = [];
 	nextSession = 0;
+	mode = CenterMode.DEBUG;
 
 	disconnectingPromise = {
 		promise: null,
@@ -532,9 +541,15 @@ class CenterSession {
 	}
 
 	sessionPdu(session, pdu) {
-		// TODO: Implement ECHO and DR functionality
 		if (pdu.command === 'submit_sm') {
 			session.send(pdu.response());
+			if (this.mode === CenterMode.ECHO) {
+				this.notify(pdu.source_addr, pdu.destination_addr, pdu.short_message);
+			}
+			// TODO: Figure out how DRs work
+			// if (this.mode === CenterMode.DR) {
+			// 	this.notify(pdu.source_addr, pdu.destination_addr, pdu.short_message);
+			// }
 		}
 		if (pdu.command === 'enquire_link') {
 			session.send(pdu.response());
@@ -639,7 +654,8 @@ class CenterSession {
 			username: this.username,
 			password: this.password,
 			status: this.status,
-			activeSessions: this.sessions.length
+			activeSessions: this.sessions.length,
+			mode: this.mode
 		}
 	}
 
@@ -1135,6 +1151,7 @@ centerSessionManager.startup();
 
 let session = clientSessionManager.getSession(0);
 let server = centerSessionManager.getSession(0);
+
 // session.connect()
 // 	.then(() => {
 // 		session.bind().then(() => {
@@ -1149,12 +1166,12 @@ let server = centerSessionManager.getSession(0);
 // 	console.log(pdu);
 // });
 
-session.on(ClientSession.ANY_PDU_EVENT, (pdu) => {
-	if (pdu.command.includes('enquire')) {
-		return;
-	}
-	console.log(pdu);
-});
+// session.on(ClientSession.ANY_PDU_EVENT, (pdu) => {
+// 	if (pdu.command.includes('enquire')) {
+// 		return;
+// 	}
+// 	console.log(pdu);
+// });
 
 new WSServer();
 new HTTPServer();
