@@ -113,6 +113,18 @@ class ClientSession {
 	auto_enquire_link_period = 500;
 	eventEmitter = new EventEmitter();
 	busy = false;
+	configuredMessageJob = {
+		source: "",
+		destination: "",
+		message: "",
+	};
+	configuredMultiMessageJob = {
+		source: "",
+		destination: "",
+		message: "",
+		interval: 1000,
+		count: 1,
+	};
 
 	connectingPromise = {
 		promise: null,
@@ -294,6 +306,18 @@ class ClientSession {
 		});
 	}
 
+	sendDefault() {
+		return this.send(this.configuredMessageJob.source, this.configuredMessageJob.destination, this.configuredMessageJob.message);
+	}
+
+	configureDefault(source, destination, message) {
+		this.configuredMessageJob = {
+			source: source,
+			destination: destination,
+			message: message
+		}
+	}
+
 	sendOnInterval(source, destination, message, interval, count) {
 		return new Promise((resolve, reject) => {
 			if (!this.canSend() || this.busy) {
@@ -302,7 +326,6 @@ class ClientSession {
 				return;
 			}
 			this.busy = true;
-			this.timer = new NanoTimer();
 			let counter = 0;
 			let previousUpdateCounter = 0;
 
@@ -314,6 +337,7 @@ class ClientSession {
 				}
 			}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
 
+			this.timer = new NanoTimer();
 			this.timer.setInterval(() => {
 				if (count > 0 && counter >= count) {
 					this.cancelSendInterval();
@@ -325,6 +349,21 @@ class ClientSession {
 			}, '', `${interval} s`);
 			resolve();
 		});
+	}
+
+	sendDefaultInterval() {
+		return this.sendOnInterval(this.configuredMultiMessageJob.source, this.configuredMultiMessageJob.destination, this.configuredMultiMessageJob.message,
+		                           this.configuredMultiMessageJob.interval, this.configuredMultiMessageJob.count);
+	}
+
+	configureDefaultInterval(source, destination, message, interval, count) {
+		this.configuredMultiMessageJob = {
+			source: source,
+			destination: destination,
+			message: message,
+			interval: interval,
+			count: count
+		}
 	}
 
 	cancelSendInterval() {
@@ -361,7 +400,9 @@ class ClientSession {
 			url: this.url,
 			username: this.username,
 			password: this.password,
-			status: this.status
+			status: this.status,
+			configuredMessageJob: this.configuredMessageJob,
+			configuredMultiMessageJob: this.configuredMultiMessageJob
 		}
 	}
 
@@ -426,7 +467,9 @@ class ClientSessionManager {
 			sessions = JSON.parse(sessions);
 			this.logger.log1(`Loaded ${sessions.length} clients from ${CLIENT_SESSIONS_FILE}...`);
 			sessions.forEach(session => {
-				this.createSession(session.url, session.username, session.password);
+				let sessionObj = this.createSession(session.url, session.username, session.password);
+				sessionObj.configuredMessageJob = session.configuredMessageJob;
+				sessionObj.configuredMultiMessageJob = session.configuredMultiMessageJob;
 			});
 		} catch (e) {
 			this.logger.log1(`Error loading clients from ${CLIENT_SESSIONS_FILE}: ${e}`);
@@ -720,7 +763,7 @@ class CenterSession {
 			password: this.password,
 			status: this.status,
 			activeSessions: this.sessions.length,
-			mode: this.mode
+			mode: this.mode,
 		}
 	}
 
@@ -803,17 +846,28 @@ class CenterSessionManager {
 	}
 }
 
+
 class HTTPServer {
 	logger = new Logger("HTTPServer");
 
 	constructor() {
 		app.use(bodyParser.json());
 
+		// TODO: Change of plans
+		// Have 2 methods per send
+		// Have one method be config method for send containing source, destination and the rest
+		// And have the other method just trigger the send
+		// That way we can configure once and send X times
+
 		app.get('/api/client', this.getClientSessions.bind(this));
 		app.post('/api/client', this.createClientSession.bind(this));
 		app.get('/api/client/:id', this.getClientSessionById.bind(this));
 		app.patch('/api/client/:id', this.patchClientSession.bind(this));
+		app.put('/api/client/:id/send', this.configSend.bind(this));
+		app.post('/api/client/:id/send/config', this.sendConfig.bind(this));
 		app.post('/api/client/:id/send', this.send.bind(this));
+		app.put('/api/client/:id/sendMany', this.configSendMany.bind(this));
+		app.post('/api/client/:id/sendMany/config', this.sendManyConfig.bind(this));
 		app.post('/api/client/:id/sendMany', this.sendMany.bind(this));
 		app.delete('/api/client/:id/sendMany', this.cancelSendMany.bind(this));
 		app.post('/api/client/:id/bind', this.bindClientSession.bind(this));
@@ -882,14 +936,74 @@ class HTTPServer {
 		}
 	}
 
-	send(req, res) {
+	configSend(req, res) {
 		let session = clientSessionManager.getSession(req.params.id);
 		let source = req.body.source;
 		let destination = req.body.destination;
 		let message = req.body.message;
+		this.logger.log1(`Setting default message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
+		if (session) {
+			session.configureDefault(source, destination, message);
+			res.send(session.serialize());
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	sendConfig(req, res) {
+		let session = clientSessionManager.getSession(req.params.id);
+		this.logger.log1(`Sending pre-configured message on session with ID ${req.params.id}`)
+		if (session) {
+			session.sendDefault()
+				.then(pdu => res.send(pdu))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	send(req, res) {
+		let session = clientSessionManager.getSession(req.params.id);
 		this.logger.log1(`Sending message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
 		if (session) {
 			session.send(source, destination, message)
+				.then(pdu => res.send(pdu))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	configSendMany(req, res) {
+		let session = clientSessionManager.getSession(req.params.id);
+		let source = req.body.source;
+		let destination = req.body.destination;
+		let message = req.body.message;
+		let interval = req.body.interval / 1000;
+		let count = req.body.count;
+		if (!!req.body.perSecond) {
+			interval = 1 / req.body.perSecond;
+		}
+		let perSecond = 1 / interval;
+		this.logger.log1(
+			`Setting default ${count} messages from ${source} to ${destination} with message ${message} on session with ID ${req.params.id} at a rate of ${perSecond} per second.`);
+		if (session) {
+			session.configureDefaultInterval(source, destination, message, interval, count);
+			res.send(session.serialize());
+		} else {
+			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	sendManyConfig(req, res) {
+		let session = clientSessionManager.getSession(req.params.id);
+		this.logger.log1(`Sending pre-configured messages on session with ID ${req.params.id}`)
+		if (session) {
+			session.sendDefaultInterval()
 				.then(pdu => res.send(pdu))
 				.catch(err => res.status(400).send(JSON.stringify(err)));
 		} else {
