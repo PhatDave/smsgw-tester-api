@@ -630,7 +630,7 @@ class CenterSession {
 		}
 	}
 
-	configNotify(source, destination, message) {
+	configureDefault(source, destination, message) {
 		this.configuredMessageJob = {
 			source: source,
 			destination: destination,
@@ -638,8 +638,8 @@ class CenterSession {
 		}
 	}
 
-	notifyConfig() {
-		this.notify(this.configuredMessageJob.source, this.configuredMessageJob.destination, this.configuredMessageJob.message);
+	notifyDefault() {
+		return this.notify(this.configuredMessageJob.source, this.configuredMessageJob.destination, this.configuredMessageJob.message);
 	}
 
 	notify(source, destination, message) {
@@ -660,7 +660,7 @@ class CenterSession {
 		});
 	}
 
-	configManyNotify(source, destination, message, interval, count) {
+	configureDefaultInterval(source, destination, message, interval, count) {
 		this.configuredMultiMessageJob = {
 			source: source,
 			destination: destination,
@@ -670,9 +670,9 @@ class CenterSession {
 		}
 	}
 
-	manyNotifyConfig() {
-		this.notifyOnInterval(this.configuredMultiMessageJob.source, this.configuredMultiMessageJob.destination, this.configuredMultiMessageJob.message,
-		                      this.configuredMultiMessageJob.interval, this.configuredMultiMessageJob.count);
+	notifyDefaultInterval() {
+		return this.notifyOnInterval(this.configuredMultiMessageJob.source, this.configuredMultiMessageJob.destination, this.configuredMultiMessageJob.message,
+		                             this.configuredMultiMessageJob.interval, this.configuredMultiMessageJob.count);
 	}
 
 	notifyOnInterval(source, destination, message, interval, count) {
@@ -907,10 +907,10 @@ class HTTPServer {
 		app.get('/api/client/:id', this.getClientSessionById.bind(this));
 		app.patch('/api/client/:id', this.patchClientSession.bind(this));
 		app.put('/api/client/:id/send', this.configSend.bind(this));
-		app.post('/api/client/:id/send/config', this.sendConfig.bind(this));
+		app.post('/api/client/:id/send/default', this.sendConfig.bind(this));
 		app.post('/api/client/:id/send', this.send.bind(this));
 		app.put('/api/client/:id/sendMany', this.configSendMany.bind(this));
-		app.post('/api/client/:id/sendMany/config', this.sendManyConfig.bind(this));
+		app.post('/api/client/:id/sendMany/default', this.sendManyConfig.bind(this));
 		app.post('/api/client/:id/sendMany', this.sendMany.bind(this));
 		app.delete('/api/client/:id/sendMany', this.cancelSendMany.bind(this));
 		app.post('/api/client/:id/bind', this.bindClientSession.bind(this));
@@ -927,10 +927,10 @@ class HTTPServer {
 		app.delete('/api/center/:id/session/:sessionId/destroy', this.deleteCenterServerSessionById.bind(this));
 		app.patch('/api/center/:id', this.patchCenterServer.bind(this));
 		app.put('/api/center/:id/send', this.configNotify.bind(this));
-		app.post('/api/center/:id/send/config', this.notifyConfig.bind(this));
+		app.post('/api/center/:id/send/default', this.notifyConfig.bind(this));
 		app.post('/api/center/:id/send', this.notify.bind(this));
 		app.put('/api/center/:id/sendMany', this.configNotifyMany.bind(this));
-		app.post('/api/center/:id/sendMany/config', this.notifyManyConfig.bind(this));
+		app.post('/api/center/:id/sendMany/default', this.notifyManyConfig.bind(this));
 		app.post('/api/center/:id/sendMany', this.notifyMany.bind(this));
 		app.delete('/api/center/:id/sendMany', this.cancelNotifyMany.bind(this));
 		app.delete('/api/center/:id/connect', this.disconnectCenterSession.bind(this));
@@ -1267,7 +1267,7 @@ class HTTPServer {
 		let server = centerSessionManager.getSession(req.params.id);
 		this.logger.log1(`Sending pre-configured message on server with ID ${req.params.id}`)
 		if (server) {
-			server.sendDefault()
+			server.notifyDefault()
 				.then(pdu => res.send(pdu))
 				.catch(err => res.status(400).send(JSON.stringify(err)));
 		} else {
@@ -1318,7 +1318,7 @@ class HTTPServer {
 		let server = centerSessionManager.getSession(req.params.id);
 		this.logger.log1(`Sending pre-configured messages on server with ID ${req.params.id}`)
 		if (server) {
-			server.sendDefaultInterval()
+			server.notifyDefaultInterval()
 				.then(pdu => res.send(pdu))
 				.catch(err => res.status(400).send(JSON.stringify(err)));
 		} else {
@@ -1672,8 +1672,8 @@ function cleanup() {
 	process.exit(0);
 }
 
-process.on('exit', cleanup);
-process.on('SIGINT', cleanup);
-process.on('SIGUSR1', cleanup);
-process.on('SIGUSR2', cleanup);
-process.on('uncaughtException', cleanup);
+// process.on('exit', cleanup);
+// process.on('SIGINT', cleanup);
+// process.on('SIGUSR1', cleanup);
+// process.on('SIGUSR2', cleanup);
+// process.on('uncaughtException', cleanup);
