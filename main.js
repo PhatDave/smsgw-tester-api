@@ -1026,6 +1026,9 @@ class HTTPServer {
 
 	send(req, res) {
 		let session = clientSessionManager.getSession(req.params.id);
+		let source = req.body.source;
+		let destination = req.body.destination;
+		let message = req.body.message;
 		this.logger.log1(`Sending message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
 		if (session) {
 			session.send(source, destination, message)
