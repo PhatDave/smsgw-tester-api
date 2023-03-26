@@ -909,12 +909,6 @@ class HTTPServer {
 	constructor() {
 		app.use(bodyParser.json());
 
-		// TODO: Change of plans
-		// Have 2 methods per send
-		// Have one method be config method for send containing source, destination and the rest
-		// And have the other method just trigger the send
-		// That way we can configure once and send X times
-
 		app.get('/api/client', this.getClientSessions.bind(this));
 		app.post('/api/client', this.createClientSession.bind(this));
 		app.get('/api/client/:id', this.getClientSessionById.bind(this));
@@ -1535,7 +1529,6 @@ class WSServer {
 
 	onClientSessionPdu(sessionId, pdu) {
 		// TODO: Maybe move this to an "ignored" array against who the pdu.command is compared
-		// TODO: Figure out why the same client is getting the same pdu more than once
 		if (pdu.command === 'enquire_link_resp' || pdu.command === 'enquire_link') {
 			return;
 		}
