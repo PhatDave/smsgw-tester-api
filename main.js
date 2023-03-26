@@ -496,6 +496,18 @@ class CenterSession {
 	sessions = [];
 	nextSession = 0;
 	mode = CenterMode.DEBUG;
+	configuredMessageJob = {
+		source: "",
+		destination: "",
+		message: "",
+	};
+	configuredMultiMessageJob = {
+		source: "",
+		destination: "",
+		message: "",
+		interval: 1000,
+		count: 1,
+	};
 
 	disconnectingPromise = {
 		promise: null,
@@ -618,6 +630,18 @@ class CenterSession {
 		}
 	}
 
+	configNotify(source, destination, message) {
+		this.configuredMessageJob = {
+			source: source,
+			destination: destination,
+			message: message
+		}
+	}
+
+	notifyConfig() {
+		this.notify(this.configuredMessageJob.source, this.configuredMessageJob.destination, this.configuredMessageJob.message);
+	}
+
 	notify(source, destination, message) {
 		return new Promise((resolve, reject) => {
 			if (!this.canSend()) {
@@ -634,6 +658,21 @@ class CenterSession {
 				resolve(pdu);
 			});
 		});
+	}
+
+	configManyNotify(source, destination, message, interval, count) {
+		this.configuredMultiMessageJob = {
+			source: source,
+			destination: destination,
+			message: message,
+			interval: interval,
+			count: count
+		}
+	}
+
+	manyNotifyConfig() {
+		this.notifyOnInterval(this.configuredMultiMessageJob.source, this.configuredMultiMessageJob.destination, this.configuredMultiMessageJob.message,
+		                      this.configuredMultiMessageJob.interval, this.configuredMultiMessageJob.count);
 	}
 
 	notifyOnInterval(source, destination, message, interval, count) {
@@ -764,6 +803,8 @@ class CenterSession {
 			status: this.status,
 			activeSessions: this.sessions.length,
 			mode: this.mode,
+			configuredMessageJob: this.configuredMessageJob,
+			configuredMultiMessageJob: this.configuredMultiMessageJob,
 		}
 	}
 
@@ -831,6 +872,8 @@ class CenterSessionManager {
 				if (!!server.mode) {
 					createdServer.mode = server.mode;
 				}
+				createdServer.configuredMessageJob = server.configuredMessageJob;
+				createdServer.configuredMultiMessageJob = server.configuredMultiMessageJob;
 			});
 		} catch (e) {
 			this.logger.log1(`Error loading centers from ${CLIENT_SESSIONS_FILE}: ${e}`);
@@ -883,7 +926,11 @@ class HTTPServer {
 		app.delete('/api/center/:id/session/:sessionId', this.closeCenterServerSessionById.bind(this));
 		app.delete('/api/center/:id/session/:sessionId/destroy', this.deleteCenterServerSessionById.bind(this));
 		app.patch('/api/center/:id', this.patchCenterServer.bind(this));
+		app.put('/api/center/:id/send', this.configNotify.bind(this));
+		app.post('/api/center/:id/send/config', this.notifyConfig.bind(this));
 		app.post('/api/center/:id/send', this.notify.bind(this));
+		app.put('/api/center/:id/sendMany', this.configNotifyMany.bind(this));
+		app.post('/api/center/:id/sendMany/config', this.notifyManyConfig.bind(this));
 		app.post('/api/center/:id/sendMany', this.notifyMany.bind(this));
 		app.delete('/api/center/:id/sendMany', this.cancelNotifyMany.bind(this));
 		app.delete('/api/center/:id/connect', this.disconnectCenterSession.bind(this));
@@ -1201,18 +1248,81 @@ class HTTPServer {
 		res.send(centerSessionManager.getAvailableCenterModes());
 	}
 
+	configNotify(req, res) {
+		let server = centerSessionManager.getSession(req.params.id);
+		let source = req.body.source;
+		let destination = req.body.destination;
+		let message = req.body.message;
+		this.logger.log1(`Setting default message from ${source} to ${destination} with message ${message} on server with ID ${req.params.id}`)
+		if (server) {
+			server.configureDefault(source, destination, message);
+			res.send(server.serialize());
+		} else {
+			this.logger.log1(`No server found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	notifyConfig(req, res) {
+		let server = centerSessionManager.getSession(req.params.id);
+		this.logger.log1(`Sending pre-configured message on server with ID ${req.params.id}`)
+		if (server) {
+			server.sendDefault()
+				.then(pdu => res.send(pdu))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No server found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
 	notify(req, res) {
 		let server = centerSessionManager.getSession(req.params.id);
 		let source = req.body.source;
 		let destination = req.body.destination;
 		let message = req.body.message;
-		this.logger.log1(`Sending notify message from ${source} to ${destination} with message ${message} on session with ID ${req.params.id}`)
+		this.logger.log1(`Sending notify message from ${source} to ${destination} with message ${message} on server with ID ${req.params.id}`)
 		if (server) {
 			server.notify(source, destination, message)
 				.then(pdu => res.send(pdu))
 				.catch(err => res.status(400).send(err));
 		} else {
 			this.logger.log1(`No session found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	configNotifyMany(req, res) {
+		let server = centerSessionManager.getSession(req.params.id);
+		let source = req.body.source;
+		let destination = req.body.destination;
+		let message = req.body.message;
+		let interval = req.body.interval / 1000;
+		let count = req.body.count;
+		if (!!req.body.perSecond) {
+			interval = 1 / req.body.perSecond;
+		}
+		let perSecond = 1 / interval;
+		this.logger.log1(
+			`Setting default ${count} messages from ${source} to ${destination} with message ${message} on server with ID ${req.params.id} at a rate of ${perSecond} per second.`);
+		if (server) {
+			server.configureDefaultInterval(source, destination, message, interval, count);
+			res.send(server.serialize());
+		} else {
+			this.logger.log1(`No server found with ID ${req.params.id}`);
+			res.status(404).send();
+		}
+	}
+
+	notifyManyConfig(req, res) {
+		let server = centerSessionManager.getSession(req.params.id);
+		this.logger.log1(`Sending pre-configured messages on server with ID ${req.params.id}`)
+		if (server) {
+			server.sendDefaultInterval()
+				.then(pdu => res.send(pdu))
+				.catch(err => res.status(400).send(JSON.stringify(err)));
+		} else {
+			this.logger.log1(`No server found with ID ${req.params.id}`);
 			res.status(404).send();
 		}
 	}
