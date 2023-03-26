@@ -1505,6 +1505,7 @@ class WSServer {
 
 	onClientSessionPdu(sessionId, pdu) {
 		// TODO: Maybe move this to an "ignored" array against who the pdu.command is compared
+		// TODO: Figure out why the same client is getting the same pdu more than once
 		if (pdu.command === 'enquire_link_resp' || pdu.command === 'enquire_link') {
 			return;
 		}
@@ -1518,6 +1519,7 @@ class WSServer {
 				value: pdu
 			}
 			this.logger.log2(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
+			console.log(clients);
 			clients.forEach(client => {
 				client.send(JSON.stringify(payload));
 			});
@@ -1672,8 +1674,7 @@ function cleanup() {
 	process.exit(0);
 }
 
-// process.on('exit', cleanup);
-// process.on('SIGINT', cleanup);
-// process.on('SIGUSR1', cleanup);
-// process.on('SIGUSR2', cleanup);
-// process.on('uncaughtException', cleanup);
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGUSR1', cleanup);
+process.on('SIGUSR2', cleanup);

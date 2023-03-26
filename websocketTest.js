@@ -6,7 +6,7 @@ const ws = new WebSocket(`ws://localhost:${WS_SERVER_PORT}`);
 const ws2 = new WebSocket(`ws://localhost:${WS_SERVER_PORT}`);
 ws.on('open', () => {
 	console.log('WebSocket connection established');
-	ws.send("client:0");
+	ws.send("client:1");
 });
 ws.on('message', (data) => {
 	console.log(String(data));
