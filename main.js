@@ -15,6 +15,9 @@ const CLIENT_SESSIONS_FILE = process.env.CLIENT_SESSIONS_FILE || "client_session
 const CENTER_SESSIONS_FILE = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 const MESSAGE_SEND_UPDATE_DELAY = process.env.MESSAGE_SEND_UPDATE_DELAY || 500;
 
+// Check if the same happens for the inverse
+// TODO: Add support for encodings
+
 [
 	'debug',
 	'log',
@@ -383,6 +386,7 @@ class ClientSession {
 				reject(`Cannot close client, not bound to ${this.url}`);
 				return;
 			}
+			this.logger.log1(`Client closing connection to ${this.url}`);
 			this.session.close();
 			this.setStatus(ClientSessionStatus.NOT_CONNECTED);
 			resolve();
@@ -600,6 +604,7 @@ class CenterSession {
 						this.eventEmitter.emit(CenterSession.ANY_PDU_EVENT, payload);
 					}
 				});
+				session.on('close', this.sessionClosed.bind(this, session));
 			} else {
 				this.logger.log1(`Center session connection failed, invalid credentials`);
 				session.send(pdu.response({
@@ -612,6 +617,14 @@ class CenterSession {
 		}
 
 		session.on('bind_transceiver', bind_transciever.bind(this));
+	}
+
+	sessionClosed(session) {
+		delete this.sessions[this.sessions.indexOf(session)];
+		this.sessions = this.sessions.filter(Boolean);
+		if (this.sessions.length === 0) {
+			this.setStatus(CenterSessionStatus.WAITING_CONNECTION);
+		}
 	}
 
 	sessionPdu(session, pdu) {
@@ -1641,16 +1654,16 @@ centerSessionManager.startup();
 // let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
 // let server = centerSessionManager.createSession(7001, 'test', 'test');
 
-// let session = clientSessionManager.getSession(0);
-// let server = centerSessionManager.getSession(0);
+let session = clientSessionManager.getSession(1);
+let server = centerSessionManager.getSession(1);
 
-// session.connect()
-// 	.then(() => {
-// 		session.bind().then(() => {
-// 			// server.notify('src', 'dst', 'msg');
-// 		}).catch(err => console.log(err));
-// 	}).catch(err => console.log(err));
-//
+session.connect()
+	.then(() => {
+		session.bind().then(() => {
+			setTimeout(() => session.close(), 1000);
+		}).catch(err => console.log(err));
+	}).catch(err => console.log(err));
+
 // setTimeout(() => session.setUsername("test123"), 2000);
 // setTimeout(() => session.setPassword("test123"), 4000);
 
