@@ -13,7 +13,7 @@ ws.on('message', (data) => {
 });
 ws2.on('open', () => {
 	console.log('WebSocket connection established');
-	ws.send("center:0");
+	ws.send("center:1");
 });
 ws2.on('message', (data) => {
 	console.log(String(data));

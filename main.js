@@ -1417,6 +1417,7 @@ class HTTPServer {
 class WSServer {
 	clients = {};
 	unknownClients = [];
+	listenersAlreadySetup = [];
 
 	constructor() {
 		this.server = new WebSocket.Server({port: WS_SERVER_PORT});
@@ -1439,22 +1440,35 @@ class WSServer {
 		if (!this.clients[type][sessionId]) {
 			this.clients[type][sessionId] = [];
 		}
+		this.logger.log1(`Adding client ${ws.id} to ${type} session ${sessionId}`);
 
 		if (type === "client") {
-			let session = clientSessionManager.getSession(sessionId);
-			if (!!session) {
-				session.on(ClientSession.STATUS_CHANGED_EVENT, this.onClientSessionStatusChange.bind(this, sessionId));
-				session.on(ClientSession.ANY_PDU_EVENT, this.onClientSessionPdu.bind(this, sessionId));
-				session.on(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onClientMessageCounterUpdate.bind(this, sessionId));
+			if (this.listenersAlreadySetup.indexOf(`client-${sessionId}`) === -1) {
+				let session = clientSessionManager.getSession(sessionId);
+				if (!!session) {
+					this.logger.log1(`Setting up listeners for client session ${sessionId}`);
+					session.on(ClientSession.STATUS_CHANGED_EVENT, this.onClientSessionStatusChange.bind(this, sessionId));
+					session.on(ClientSession.ANY_PDU_EVENT, this.onClientSessionPdu.bind(this, sessionId));
+					session.on(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onClientMessageCounterUpdate.bind(this, sessionId));
+				}
+				this.listenersAlreadySetup.push(`client-${sessionId}`);
+			} else {
+				this.logger.log1(`Listeners for client session ${sessionId} already set up`);
 			}
 		} else if (type === "center") {
-			let session = centerSessionManager.getSession(sessionId);
-			if (!!session) {
-				session.on(CenterSession.STATUS_CHANGED_EVENT, this.onCenterStatusChange.bind(this, sessionId));
-				session.on(CenterSession.ANY_PDU_EVENT, this.onCenterServerPdu.bind(this, sessionId));
-				session.on(CenterSession.MODE_CHANGED_EVENT, this.onCenterModeChanged.bind(this, sessionId));
-				session.on(CenterSession.SESSION_CHANGED_EVENT, this.onCenterSessionsChanged.bind(this, sessionId));
-				session.on(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onCenterMessageCounterUpdate.bind(this, sessionId));
+			if (this.listenersAlreadySetup.indexOf(`center-${sessionId}`) === -1) {
+				let session = centerSessionManager.getSession(sessionId);
+				if (!!session) {
+					this.logger.log1(`Setting up listeners for center session ${sessionId}`);
+					session.on(CenterSession.STATUS_CHANGED_EVENT, this.onCenterStatusChange.bind(this, sessionId));
+					session.on(CenterSession.ANY_PDU_EVENT, this.onCenterServerPdu.bind(this, sessionId));
+					session.on(CenterSession.MODE_CHANGED_EVENT, this.onCenterModeChanged.bind(this, sessionId));
+					session.on(CenterSession.SESSION_CHANGED_EVENT, this.onCenterSessionsChanged.bind(this, sessionId));
+					session.on(ClientSession.MESSAGE_SEND_COUNTER_UPDATE_EVENT, this.onCenterMessageCounterUpdate.bind(this, sessionId));
+				}
+				this.listenersAlreadySetup.push(`center-${sessionId}`);
+			} else {
+				this.logger.log1(`Listeners for center session ${sessionId} already set up`);
 			}
 		}
 
@@ -1535,7 +1549,6 @@ class WSServer {
 				value: pdu
 			}
 			this.logger.log2(`Broadcasting session with ID ${sessionId} to ${clients.length} clients`);
-			console.log(clients);
 			clients.forEach(client => {
 				client.send(JSON.stringify(payload));
 			});
@@ -1663,7 +1676,7 @@ let server = centerSessionManager.getSession(1);
 session.connect()
 	.then(() => {
 		session.bind().then(() => {
-			setTimeout(() => session.close(), 1000);
+			// setTimeout(() => session.close(), 1000);
 		}).catch(err => console.log(err));
 	}).catch(err => console.log(err));
 
