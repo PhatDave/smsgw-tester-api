@@ -212,6 +212,7 @@ class ClientSession {
 					                            auto_enquire_link_period: this.auto_enquire_link_period,
 				                            }, this.connected.bind(this));
 				this.session.on('error', this.error.bind(this));
+				this.session.on('close', this.closed.bind(this));
 			} catch (e) {
 				this.logger.log1("Client connection failed to " + this.url);
 				this.setStatus(ClientSessionStatus.NOT_CONNECTED);
@@ -222,6 +223,11 @@ class ClientSession {
 			this.connectingPromise.reject = reject;
 		});
 		return this.connectingPromise.promise;
+	}
+
+	closed() {
+		this.logger.log1(`Client closed connection to ${this.url}`);
+		this.setStatus(ClientSessionStatus.NOT_CONNECTED);
 	}
 
 	error(error) {
