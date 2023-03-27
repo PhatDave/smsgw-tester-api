@@ -17,6 +17,10 @@ const MESSAGE_SEND_UPDATE_DELAY = process.env.MESSAGE_SEND_UPDATE_DELAY || 500;
 
 // Check if the same happens for the inverse
 // TODO: Add support for encodings
+// TODO: Currently there is no feedback about the success of the multi send operation save for the counter
+// Make a simple event that fires once multi send is complete
+// TODO: Have every session (client or center) have it's own websocket, this would simplify the code a lot
+// TODO: Implement some sort of metrics on frontend by counting the pdus
 
 [
 	'debug',
@@ -174,7 +178,7 @@ class ClientSession {
 	refresh() {
 		this.logger.log1(`Refreshing client with url ${this.url} and id ${this.id}`);
 		let status = this.status;
-		this.close();
+		this.close().catch(err => this.logger.log1(err));
 		if (status === ClientSessionStatus.CONNECTED) {
 			this.connect().catch(err => this.logger.log1(err));
 		}
@@ -1663,7 +1667,7 @@ centerSessionManager.startup();
 // let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
 // let server = centerSessionManager.createSession(7001, 'test', 'test');
 
-let session = clientSessionManager.getSession(1);
+let session = clientSessionManager.getSession(0);
 let server = centerSessionManager.getSession(1);
 
 session.connect()
