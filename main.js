@@ -19,7 +19,17 @@ const MESSAGE_SEND_UPDATE_DELAY = process.env.MESSAGE_SEND_UPDATE_DELAY || 500;
 // TODO: Add support for encodings
 // TODO: Currently there is no feedback about the success of the multi send operation save for the counter
 // Make a simple event that fires once multi send is complete
-// TODO: Have every session (client or center) have it's own websocket, this would simplify the code a lot
+// Have every session (client or center) have it's own websocket, this would simplify the code a lot (actually this cannot be done! instead:
+// wss.on("connection", (ws, req) => {
+//   const url = req.url;
+//   if (url === "/test123") {
+//     console.log("Connected to test123");
+//     // Handle messages from client here
+//   } else {
+//     console.log("Invalid URL:", url);
+//     ws.close();
+//   }
+// });
 // TODO: Implement some sort of metrics on frontend by counting the pdus
 
 [
