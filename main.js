@@ -31,6 +31,7 @@ const MESSAGE_SEND_UPDATE_DELAY = process.env.MESSAGE_SEND_UPDATE_DELAY || 500;
 //   }
 // });
 // TODO: Implement some sort of metrics on frontend by counting the pdus
+// TODO: Currently clients don't realize they've been disconnected by time out
 
 [
 	'debug',
@@ -188,7 +189,7 @@ class ClientSession {
 	refresh() {
 		this.logger.log1(`Refreshing client with url ${this.url} and id ${this.id}`);
 		let status = this.status;
-		this.close().catch(err => this.logger.log1(err));
+		this.close().catch(err => err);
 		if (status === ClientSessionStatus.CONNECTED) {
 			this.connect().catch(err => this.logger.log1(err));
 		}
@@ -1677,7 +1678,7 @@ centerSessionManager.startup();
 // let session = clientSessionManager.createSession('smpp://localhost:7001', 'test', 'test');
 // let server = centerSessionManager.createSession(7001, 'test', 'test');
 
-let session = clientSessionManager.getSession(0);
+let session = clientSessionManager.getSession(1);
 let server = centerSessionManager.getSession(1);
 
 session.connect()
