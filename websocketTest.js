@@ -34,7 +34,7 @@ let centerMetrics = new Metrics();
 const ws = new WebSocket(`ws://localhost:${WS_SERVER_PORT}`);
 ws.on('open', () => {
 	console.log('WebSocket connection established');
-	ws.send("client:1");
+	ws.send("client:0");
 });
 ws.on('message', (data) => {
 	data = JSON.parse(data);

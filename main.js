@@ -16,13 +16,8 @@ const CLIENT_SESSIONS_FILE = process.env.CLIENT_SESSIONS_FILE || "client_session
 const CENTER_SESSIONS_FILE = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 const MESSAGE_SEND_UPDATE_DELAY = process.env.MESSAGE_SEND_UPDATE_DELAY || 500;
 
-// Check if the same happens for the inverse
 // TODO: Add support for encodings
-// TODO: Currently there is no feedback about the success of the multi send operation save for the counter
-// Make a simple event that fires once multi send is complete
 // TODO: Implement some sort of metrics on frontend by counting the pdus
-// TODO: Currently clients don't realize they've been disconnected by time out
-// TODO: Currently the center does not realize a session dropped before sending ccredentials
 
 [
 	'debug',
@@ -113,6 +108,7 @@ let logger = new Logger("main");
 class ClientSessionStatus {
 	static CONNECTING = "CONNECTING";
 	static CONNECTED = "CONNECTED";
+	static BUSY = "BUSY";
 	static BINDING = "BINDING";
 	static BOUND = "BOUND";
 	static NOT_CONNECTED = "NOT CONNECTED";
@@ -122,7 +118,6 @@ class ClientSession {
 	// TODO: Enable requesting DRs
 	auto_enquire_link_period = 500;
 	eventEmitter = new EventEmitter();
-	busy = false;
 	configuredMessageJob = {
 		source: "",
 		destination: "",
@@ -339,12 +334,12 @@ class ClientSession {
 
 	sendOnInterval(source, destination, message, interval, count) {
 		return new Promise((resolve, reject) => {
-			if (!this.canSend() || this.busy) {
+			if (!this.canSend()) {
 				this.logger.log1(`Client cannot send many message, not bound to ${this.url} or busy`);
 				reject(`Client cannot send many message, not bound to ${this.url} or busy`);
 				return;
 			}
-			this.busy = true;
+			this.setStatus(ClientSessionStatus.BUSY);
 			let counter = 0;
 			let previousUpdateCounter = 0;
 
@@ -392,7 +387,7 @@ class ClientSession {
 			this.timer = null;
 			this.updateTimer = null;
 		}
-		this.busy = false;
+		this.setStatus(ClientSessionStatus.BOUND);
 	}
 
 	close() {
@@ -499,8 +494,9 @@ class ClientSessionManager {
 
 class CenterSessionStatus {
 	static CONNECTED = "CONNECTED";
-	static WAITING_CONNECTION = "WAITING_CONNECTION";
-	static CONNECTION_PENDING = "CONNECTION_PENDING";
+	static WAITING_CONNECTION = "WAITING CONNECTION";
+	static CONNECTION_PENDING = "CONNECTION PENDING";
+	static BUSY = "BUSY";
 }
 
 class CenterMode {
@@ -512,7 +508,6 @@ class CenterMode {
 class CenterSession {
 	// TODO: If the port is in use this throws an exception, catch it and log it
 	eventEmitter = new EventEmitter();
-	busy = false;
 	sessions = [];
 	nextSession = 0;
 	mode = CenterMode.DEBUG;
@@ -731,12 +726,12 @@ class CenterSession {
 
 	notifyOnInterval(source, destination, message, interval, count) {
 		return new Promise((resolve, reject) => {
-			if (!this.canSend() || this.busy) {
+			if (!this.canSend()) {
 				this.logger.log1(`Center cannot send many message, no sessions active to ${this.port} or busy`);
 				reject(`Center cannot send many message, no sessions active to ${this.port} or busy`);
 				return;
 			}
-			this.busy = true;
+			this.setStatus(CenterSessionStatus.BUSY);
 			this.timer = new NanoTimer();
 			let counter = 0;
 			let previousUpdateCounter = 0;
@@ -769,7 +764,7 @@ class CenterSession {
 			this.timer = null;
 			this.updateTimer = null;
 		}
-		this.busy = false;
+		this.setStatus(CenterSessionStatus.CONNECTED);
 	}
 
 	getNextSession() {
@@ -1135,7 +1130,7 @@ class HTTPServer {
 
 	cancelSendMany(req, res) {
 		let session = clientSessionManager.getSession(req.params.id);
-		if (!session.busy) {
+		if (session.status !== ClientSessionStatus.BUSY) {
 			res.status(400).send({
 				                     err: true,
 				                     msg: `Session with ID ${req.params.id} is not sending messages`
@@ -1403,7 +1398,7 @@ class HTTPServer {
 
 	cancelNotifyMany(req, res) {
 		let server = centerSessionManager.getSession(req.params.id);
-		if (!server.busy) {
+		if (server.status !== ClientSessionStatus.BUSY) {
 			res.status(400).send({
 				                     err: true,
 				                     msg: `Session with ID ${req.params.id} is not sending messages`
