@@ -300,9 +300,9 @@ class ClientSession {
 		}
 	}
 
-	send(source, destination, message) {
+	send(source, destination, message, force=false) {
 		return new Promise((resolve, reject) => {
-			if (!this.canSend()) {
+			if (!force && !this.canSend()) {
 				this.logger.log1(`Client cannot send message, not bound to ${this.url} or busy`);
 				reject(`Client cannot send message, not bound to ${this.url} or busy`);
 				return;
@@ -356,7 +356,7 @@ class ClientSession {
 				if (count > 0 && counter >= count) {
 					this.cancelSendInterval();
 				} else {
-					this.send(source, destination, message)
+					this.send(source, destination, message, true)
 						.catch(e => this.logger.log1(`Error sending message: ${e}`));
 					counter++;
 				}
@@ -678,9 +678,9 @@ class CenterSession {
 		return this.notify(this.configuredMessageJob.source, this.configuredMessageJob.destination, this.configuredMessageJob.message);
 	}
 
-	notify(source, destination, message) {
+	notify(source, destination, message, force=false) {
 		return new Promise((resolve, reject) => {
-			if (!this.canSend()) {
+			if (!force && !this.canSend()) {
 				this.logger.log1(`Center cannot send message, no sessions active on ${this.port} or busy`);
 				reject(`Center cannot send message, no sessions active on ${this.port} or busy`);
 				return;
@@ -748,7 +748,7 @@ class CenterSession {
 				if (count > 0 && counter >= count) {
 					this.cancelNotifyInterval();
 				} else {
-					this.notify(source, destination, message)
+					this.notify(source, destination, message, true)
 						.catch(e => this.logger.log1(`Error sending message: ${e}`));
 					counter++;
 				}
