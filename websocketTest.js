@@ -3,7 +3,10 @@ const WebSocket = require('ws');
 const WS_SERVER_PORT = process.env.WS_SERVER_PORT || 8191;
 
 class Metrics {
-	static interestingMetrics = ['submit_sm', 'deliver_sm'];
+	static interestingMetrics = [
+		'submit_sm',
+		'deliver_sm'
+	];
 	metrics = {};
 
 	constructor() {
@@ -31,13 +34,11 @@ let centerMetrics = new Metrics();
 const ws = new WebSocket(`ws://localhost:${WS_SERVER_PORT}`);
 ws.on('open', () => {
 	console.log('WebSocket connection established');
-	ws.send("client:0");
+	ws.send("client:1");
 });
 ws.on('message', (data) => {
 	data = JSON.parse(data);
-	if (data.type === 'pdu') {
-		clientMetrics.processPdu(data.value);
-	}
+	console.log(data);
 });
 
 const ws2 = new WebSocket(`ws://localhost:${WS_SERVER_PORT}`);
@@ -47,13 +48,14 @@ ws2.on('open', () => {
 });
 ws2.on('message', (data) => {
 	data = JSON.parse(data);
-	if (data.type === 'pdu') {
-		centerMetrics.processPdu(data.value);
-	}
+	console.log(data);
+	// if (data.type === 'pdu') {
+	// 	centerMetrics.processPdu(data.value);
+	// }
 });
 
-setInterval(() => {
-	console.log(clientMetrics.metrics);
-	console.log(centerMetrics.metrics);
-	console.log("");
-}, 500);
+// setInterval(() => {
+// 	console.log(clientMetrics.metrics);
+// 	// console.log(centerMetrics.metrics);
+// 	console.log("");
+// }, 500);
