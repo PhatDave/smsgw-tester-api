@@ -35,7 +35,7 @@ export class Client implements SmppSession {
 
 		this.eventEmitter = new EventEmitter();
 		this.logger = new Logger(`Client-${id}`);
-		this.setStatus(ClientStatus.NOT_CONNECTED)
+		this.status = ClientStatus.NOT_CONNECTED;
 
 		this.initialize();
 	}
@@ -90,11 +90,6 @@ export class Client implements SmppSession {
 		return this.defaultMultipleJob;
 	}
 
-	setStatus(status: ClientStatus): void {
-		this._status = status;
-		this.eventEmitter.emit("status", status);
-	}
-
 	initialize(): void {
 		this.defaultSingleJob = Job.createEmptySingle();
 		this.defaultMultipleJob = Job.createEmptyMultiple();
@@ -112,10 +107,10 @@ export class Client implements SmppSession {
 			}
 
 			this.logger.log1(`Client-${this._id} connecting to ${this._url}`);
-			this.setStatus(ClientStatus.CONNECTING);
+			this.status = ClientStatus.CONNECTING;
 			this.connectSession().then(resolve, ((err: any) => {
 				this.logger.log1(`Client-${this._id} connection failed: ${err}`);
-				this.setStatus(ClientStatus.NOT_CONNECTED);
+				this.status = ClientStatus.NOT_CONNECTED;
 				this.session.close();
 				reject(err);
 			}));
@@ -130,7 +125,7 @@ export class Client implements SmppSession {
 			this.session.bind_transceiver({
 				system_id: this._username, password: this._password,
 			}, this.eventBindReply.bind(this));
-			this.setStatus(ClientStatus.BINDING);
+			this.status = ClientStatus.BINDING;
 		});
 		return this.bindPromise;
 	}
@@ -152,7 +147,7 @@ export class Client implements SmppSession {
 		return new Promise((resolve, reject) => {
 			this.logger.log1(`Client-${this._id} closing connection`);
 			this.session.close();
-			this.setStatus(ClientStatus.NOT_CONNECTED);
+			this.status = ClientStatus.NOT_CONNECTED;
 			resolve();
 		});
 	}
@@ -164,8 +159,7 @@ export class Client implements SmppSession {
 				this.validateBound(reject);
 			}
 			this.logger.log5(`Client-${this._id} sending PDU: ${JSON.stringify(pdu)}`);
-			this.session.send(pdu);
-			resolve(pdu);
+			this.session.send(pdu, (replyPdu: object) => resolve(replyPdu));
 		});
 	}
 
@@ -178,7 +172,7 @@ export class Client implements SmppSession {
 			}
 			this.logger.log1(`Client-${this._id} sending multiple messages: ${JSON.stringify(job)}`);
 
-			this.setStatus(ClientStatus.BUSY);
+			this.status = ClientStatus.BUSY;
 
 			let counter = 0;
 			let previousUpdateCounter = 0;
@@ -218,7 +212,7 @@ export class Client implements SmppSession {
 			this.sendTimer = null;
 			this.counterUpdateTimer = null;
 		}
-		this.setStatus(ClientStatus.BOUND);
+		this.status = ClientStatus.BOUND;
 	}
 
 	on(event: string, callback: (...args: any[]) => void): void {
@@ -253,7 +247,7 @@ export class Client implements SmppSession {
 
 	private eventSessionConnected(): void {
 		this.logger.log1(`Client-${this._id} connected to ${this._url}`);
-		this.setStatus(ClientStatus.CONNECTED);
+		this.status = ClientStatus.CONNECTED;
 		if (this.connectPromise) {
 			this.connectPromise.resolve();
 		}
@@ -266,26 +260,26 @@ export class Client implements SmppSession {
 
 	private eventSessionError(pdu: any): void {
 		this.logger.log1(`Client-${this._id} error on ${this._url}`);
-		this.setStatus(ClientStatus.NOT_CONNECTED);
+		this.status = ClientStatus.NOT_CONNECTED;
 		this.rejectPromises(pdu);
 	}
 
 	private eventSessionClose(): void {
 		this.logger.log1(`Client-${this._id} closed on ${this._url}`);
-		this.setStatus(ClientStatus.NOT_CONNECTED);
+		this.status = ClientStatus.NOT_CONNECTED;
 		this.rejectPromises();
 	}
 
 	private eventBindReply(pdu: any): void {
 		if (pdu.command_status === 0) {
 			this.logger.log1(`Client-${this._id} bound to ${this._url}`);
-			this.setStatus(ClientStatus.BOUND);
+			this.status = ClientStatus.BOUND;
 			if (this.bindPromise) {
 				this.bindPromise.resolve();
 			}
 		} else {
 			this.logger.log1(`Client-${this._id} bind failed to ${this.url}`);
-			this.setStatus(ClientStatus.CONNECTED);
+			this.status = ClientStatus.CONNECTED;
 			if (this.bindPromise) {
 				this.bindPromise.reject(pdu);
 			}

@@ -5,19 +5,25 @@ import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";
 import {SmppSession} from "../SmppSession";
 import {CenterEvents} from "./CenterEvents";
+import {CenterPDUProcessor} from "./CenterPDUProcessor";
 import CenterStatus from "./CenterStatus";
 
 const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
 
+const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
+
 export class Center implements SmppSession {
 	port: number;
 	private pendingSessions: any[] = [];
 	private sessions: any[] = [];
+	private nextSession: number = 0;
 	private server: any;
 	private eventEmitter: EventEmitter = new EventEmitter();
 	private readonly logger: Logger;
 	private readonly _id: number;
+	private sendTimer: any | null = null;
+	private counterUpdateTimer: any | null = null;
 
 	constructor(id: number, port: number, username: string, password: string) {
 		this._id = id;
@@ -30,7 +36,19 @@ export class Center implements SmppSession {
 		this.initialize();
 	}
 
+	// TODO: Implement a few modes and set this to default DEBUG
+	private _processor: CenterPDUProcessor | undefined;
+
+	set processor(value: CenterPDUProcessor) {
+		this._processor = value;
+		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
+	}
+
 	private _defaultMultipleJob!: Job;
+
+	get defaultMultipleJob(): Job {
+		return this._defaultMultipleJob;
+	}
 
 	set defaultMultipleJob(value: Job) {
 		this._defaultMultipleJob = value;
@@ -38,6 +56,10 @@ export class Center implements SmppSession {
 	}
 
 	private _defaultSingleJob!: Job;
+
+	get defaultSingleJob(): Job {
+		return this._defaultSingleJob;
+	}
 
 	set defaultSingleJob(value: Job) {
 		this._defaultSingleJob = value;
@@ -101,23 +123,60 @@ export class Center implements SmppSession {
 	}
 
 	sendMultiple(job: Job): Promise<void> {
-		throw new Error("NEBI");
+		return new Promise((resolve, reject) => {
+			this.validateSessions(reject);
+			if (!job.count || !job.perSecond) {
+				reject(`Center-${this._id} sendMultiple failed: invalid job, missing fields`);
+			}
+			this.logger.log1(`Center-${this._id} sending multiple messages: ${JSON.stringify(job)}`);
+
+			let counter = 0;
+			let previousUpdateCounter = 0;
+
+			this.counterUpdateTimer = new NanoTimer();
+			this.counterUpdateTimer.setInterval(() => {
+				if (previousUpdateCounter !== counter) {
+					this.eventEmitter.emit(ClientEvents.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
+					previousUpdateCounter = counter;
+				}
+			}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
+
+			let count = job.count || 1;
+			let interval = 1 / (job.perSecond || 1);
+			this.sendTimer = new NanoTimer();
+			this.sendTimer.setInterval(() => {
+				if (count > 0 && counter >= count) {
+					this.cancelSendInterval();
+				} else {
+					this.sendPdu(job.pdu, true)
+						.catch(e => this.logger.log1(`Error sending message: ${e}`));
+					counter++;
+				}
+			}, '', `${interval} s`);
+			resolve();
+		});
 	}
 
 	sendMultipleDefault(): Promise<void> {
-		throw new Error("NEBI");
+		return this.sendMultiple(this.defaultMultipleJob);
 	}
 
 	sendPdu(pdu: object, force?: boolean): Promise<object> {
-		throw new Error("NEBI");
+		return new Promise((resolve, reject) => {
+			if (!force) {
+				this.validateSessions(reject);
+			}
+			this.logger.log5(`Center-${this._id} sending PDU: ${JSON.stringify(pdu)}`);
+			this.getNextSession().send(pdu, (replyPdu: object) => resolve(replyPdu));
+		});
 	}
 
 	sendSingle(job: Job): Promise<object> {
-		throw new Error("NEBI");
+		return this.sendPdu(job.pdu);
 	}
 
 	sendSingleDefault(): Promise<object> {
-		throw new Error("NEBI");
+		return this.sendPdu(this.defaultSingleJob.pdu);
 	}
 
 	serialize(): object {
@@ -133,6 +192,21 @@ export class Center implements SmppSession {
 
 	setDefaultSingleJob(job: Job): void {
 		throw new Error("NEBI");
+	}
+
+	private validateSessions(reject: (reason?: any) => void) {
+		if (this.sessions.length === 0) {
+			reject(`No clients connected`);
+		}
+	}
+
+	private getNextSession(): any {
+		if (this.sessions.length === 0) {
+			return null;
+		}
+		let session = this.sessions[this.nextSession];
+		this.nextSession = (this.nextSession + 1) % this.sessions.length;
+		return session;
 	}
 
 	private eventBindTransciever(session: any, pdu: any) {
@@ -174,6 +248,7 @@ export class Center implements SmppSession {
 	private eventSessionClose(session: any): void {
 		this.logger.log1(`A client disconnected from center-${this._id}`);
 		this.sessions = this.sessions.filter((s: any) => s !== session);
+		this.nextSession = 0;
 		this.pendingSessions = this.pendingSessions.filter((s: any) => s !== session);
 		this.updateStatus();
 	}

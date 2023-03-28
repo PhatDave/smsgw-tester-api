@@ -21,6 +21,7 @@ const app = express();
 const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
 const WS_SERVER_PORT: number = Number(process.env.WS_SERVER_PORT) || 8191;
 const CENTER_SESSIONS_FILE: string = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
+const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
 // TODO: Add support for encodings
 // TODO: Implement some sort of metrics on frontend by counting the pdus
