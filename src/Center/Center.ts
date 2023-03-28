@@ -1,6 +1,5 @@
 import EventEmitter from "events";
 import {ClientEvents} from "../Client/ClientEvents";
-import ClientStatus from "../Client/ClientStatus";
 import {Job} from "../Job/Job";
 import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";
@@ -134,19 +133,24 @@ export class Center implements SmppSession {
 	}
 
 	close(): Promise<void> {
-		throw new Error("NEBI");
+		return new Promise((resolve, reject) => {
+			this.logger.log1(`Center-${this._id} closing...`);
+			this.server.close();
+			this.status = CenterStatus.WAITING_CONNECTION;
+			resolve();
+		});
 	}
 
 	getDefaultMultipleJob(): Job {
-		throw new Error("NEBI");
+		return this.getDefaultSingleJob();
 	}
 
 	getDefaultSingleJob(): Job {
-		throw new Error("NEBI");
+		return this.defaultSingleJob;
 	}
 
 	getId(): number {
-		throw new Error("NEBI");
+		return this.id;
 	}
 
 	sendMultiple(job: Job): Promise<void> {
@@ -220,11 +224,11 @@ export class Center implements SmppSession {
 	}
 
 	setDefaultMultipleJob(job: Job): void {
-		throw new Error("NEBI");
+		this.defaultMultipleJob = job;
 	}
 
 	setDefaultSingleJob(job: Job): void {
-		throw new Error("NEBI");
+		this.defaultSingleJob = job;
 	}
 
 	private validateSessions(reject: (reason?: any) => void) {
@@ -297,8 +301,6 @@ export class Center implements SmppSession {
 	}
 
 	private eventAnyPdu(pdu: any): void {
-		console.log("eventAnyPdu");
-		// console.log(pdu);
 		this.eventEmitter.emit(CenterEvents.ANY_PDU, pdu);
 	}
 }

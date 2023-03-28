@@ -60,12 +60,13 @@ async function main() {
 
 	let center: Center = new Center(0, 7000, "test", "test");
 	setTimeout(() => {
-		center.sendMultiple(new Job(new PDU("deliver_sm", {
-			source_addr: "1234567890",
-			destination_addr: "1234567890",
-			short_message: "Hello World"
-		}), 100, 100));
-	}, 10000);
+		// center.sendMultiple(new Job(new PDU("deliver_sm", {
+		// 	source_addr: "1234567890",
+		// 	destination_addr: "1234567890",
+		// 	short_message: "Hello World"
+		// }), 100, 100));
+		center.close();
+	}, 1000);
 }
 
 main();
