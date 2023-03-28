@@ -32,7 +32,9 @@ client.connectAndBind().then(() => {
 		source_addr: "1234567890",
 		destination_addr: "1234567890",
 		short_message: "Hello World"
-	}), 100, 100))
+	}), 100, 100));
+
+	client.on(Client.ClientEvents.ANY_PDU, (pdu: any) => console.log(pdu));
 });
 
 // class ClientSession {

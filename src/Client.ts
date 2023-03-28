@@ -201,6 +201,10 @@ export class Client implements SmppSession {
 		this.setStatus(ClientStatus.BOUND);
 	}
 
+	on(event: string, callback: (...args: any[]) => void): void {
+		this.eventEmitter.on(event, callback);
+	}
+
 	private connectSession(): void {
 		if (!this.fieldsAreOk()) {
 			return;

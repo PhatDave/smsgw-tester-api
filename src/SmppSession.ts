@@ -4,7 +4,7 @@ export interface SmppSession {
 	username: string,
 	password: string,
 
-	sendPdu(pdu: object): Promise<object>;
+	sendPdu(pdu: object, force?: boolean): Promise<object>;
 
 	sendSingle(job: Job): Promise<object>;
 
