@@ -1,5 +1,6 @@
 import EventEmitter from "events";
 import {ClientEvents} from "../Client/ClientEvents";
+import ClientStatus from "../Client/ClientStatus";
 import {Job} from "../Job/Job";
 import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";
@@ -14,7 +15,6 @@ const smpp = require("smpp");
 const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
 export class Center implements SmppSession {
-	port: number;
 	private pendingSessions: any[] = [];
 	private sessions: any[] = [];
 	private nextSession: number = 0;
@@ -27,13 +27,23 @@ export class Center implements SmppSession {
 
 	constructor(id: number, port: number, username: string, password: string) {
 		this._id = id;
-		this.port = port;
+		this._port = port;
 		this._username = username;
 		this._password = password;
 
 		this.logger = new Logger(`Center-${id}`);
 
 		this.initialize();
+	}
+
+	get id(): number {
+		return this._id;
+	}
+
+	private _port: number;
+
+	get port(): number {
+		return this._port;
 	}
 
 	// TODO: Implement a few modes and set this to default DEBUG
@@ -68,6 +78,10 @@ export class Center implements SmppSession {
 
 	private _password: string;
 
+	get password(): string {
+		return this._password;
+	}
+
 	set password(value: string) {
 		this._password = value;
 		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
@@ -75,12 +89,20 @@ export class Center implements SmppSession {
 
 	private _username: string;
 
+	get username(): string {
+		return this._username;
+	}
+
 	set username(value: string) {
 		this._username = value;
 		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
 	}
 
 	private _status: CenterStatus = CenterStatus.WAITING_CONNECTION;
+
+	get status(): CenterStatus {
+		return this._status;
+	}
 
 	set status(value: CenterStatus) {
 		this._status = value;
@@ -98,12 +120,17 @@ export class Center implements SmppSession {
 		this.server.on('error', this.eventSessionError.bind(this));
 		this.server.on('close', this.eventSessionClose.bind(this));
 		this.server.on('pdu', this.eventAnyPdu.bind(this));
-		this.server.listen(this.port);
+		this.server.listen(this._port);
 		this.status = CenterStatus.WAITING_CONNECTION;
 	}
 
 	cancelSendInterval(): void {
-		throw new Error("NEBI");
+		if (this.sendTimer) {
+			this.sendTimer.clearInterval();
+			this.counterUpdateTimer.clearInterval();
+			this.sendTimer = null;
+			this.counterUpdateTimer = null;
+		}
 	}
 
 	close(): Promise<void> {
@@ -149,7 +176,8 @@ export class Center implements SmppSession {
 					this.cancelSendInterval();
 				} else {
 					this.sendPdu(job.pdu, true)
-						.catch(e => this.logger.log1(`Error sending message: ${e}`));
+						.then(() => {
+						}, err => this.logger.log1(`Error sending message: ${err}`));
 					counter++;
 				}
 			}, '', `${interval} s`);
@@ -167,7 +195,7 @@ export class Center implements SmppSession {
 				this.validateSessions(reject);
 			}
 			this.logger.log5(`Center-${this._id} sending PDU: ${JSON.stringify(pdu)}`);
-			this.getNextSession().send(pdu, (replyPdu: object) => resolve(replyPdu));
+			this.getNextSession().send(pdu, (replyPdu: object) => resolve(replyPdu), (err: object) => reject(err));
 		});
 	}
 
@@ -181,8 +209,13 @@ export class Center implements SmppSession {
 
 	serialize(): object {
 		return {
-			id: this._id, port: this.port, username: this._username, password: this._password, status: this._status,
-			defaultSingleJob: this._defaultSingleJob, defaultMultipleJob: this._defaultMultipleJob,
+			id: this._id,
+			port: this._port,
+			username: this._username,
+			password: this._password,
+			status: this._status,
+			defaultSingleJob: this._defaultSingleJob,
+			defaultMultipleJob: this._defaultMultipleJob,
 		};
 	}
 
@@ -209,7 +242,7 @@ export class Center implements SmppSession {
 		return session;
 	}
 
-	private eventBindTransciever(session: any, pdu: any) {
+	private eventBindTransceiver(session: any, pdu: any) {
 		this.logger.log1(`Center-${this._id} got a bind_transciever with system_id ${pdu.system_id} and password ${pdu.password}`);
 		session.pause();
 		if (pdu.system_id === this.username && pdu.password === this.password) {
@@ -220,7 +253,7 @@ export class Center implements SmppSession {
 			this.sessions.push(session);
 			this.updateStatus();
 		} else {
-			this.logger.log1(`Center-${this._id} client connection failed, invalid credentials`);
+			this.logger.log1(`Center-${this._id} client connection failed, invalid credentials (expected: ${this.username}, ${this.password})`);
 			session.send(pdu.response({
 				command_status: smpp.ESME_RBINDFAIL
 			}));
@@ -235,7 +268,7 @@ export class Center implements SmppSession {
 		this.pendingSessions.push(session);
 		session.on('close', this.eventSessionClose.bind(this, session));
 		session.on('error', this.eventSessionError.bind(this, session));
-		session.on('bind_transciever', this.eventBindTransciever.bind(this, session));
+		session.on('bind_transceiver', this.eventBindTransceiver.bind(this, session));
 		session.on('pdu', this.eventAnyPdu.bind(this, session));
 		this.updateStatus();
 		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());

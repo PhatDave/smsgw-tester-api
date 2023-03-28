@@ -1,6 +1,5 @@
 import {Center} from "./Center/Center";
 import {Client} from "./Client/Client";
-import {ClientEvents} from "./Client/ClientEvents";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import {Job} from "./Job/Job";
 import Logger from "./Logger";
@@ -60,6 +59,13 @@ async function main() {
 	// });
 
 	let center: Center = new Center(0, 7000, "test", "test");
+	setTimeout(() => {
+		center.sendMultiple(new Job(new PDU("deliver_sm", {
+			source_addr: "1234567890",
+			destination_addr: "1234567890",
+			short_message: "Hello World"
+		}), 100, 100));
+	}, 10000);
 }
 
 main();
