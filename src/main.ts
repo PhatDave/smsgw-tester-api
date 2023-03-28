@@ -1,3 +1,4 @@
+import {Center} from "./Center/Center";
 import {Client} from "./Client/Client";
 import {ClientEvents} from "./Client/ClientEvents";
 import ClientSessionManager from "./Client/ClientSessionManager";
@@ -33,29 +34,31 @@ async function main() {
 	// let client: Client = await clientManager.createSession("smpp://localhost:7000", "test", "test") as Client;
 	let client: Client = await clientManager.getSession(0) as Client;
 
-	client.connectAndBind().then(() => {
-		console.log("POGGIES");
-		let pdu1 = new smpp.PDU('submit_sm', {
-			source_addr: "1234567890",
-			destination_addr: "1234567890",
-			short_message: "Hello World"
-		});
-		// client.sendMultipleDefault();
+	// client.connectAndBind().then(() => {
+	// 	console.log("POGGIES");
+	// 	let pdu1 = new smpp.PDU('submit_sm', {
+	// 		source_addr: "1234567890",
+	// 		destination_addr: "1234567890",
+	// 		short_message: "Hello World"
+	// 	});
+	// 	// client.sendMultipleDefault();
+	//
+	// 	// client.on(ClientEvents.ANY_PDU, (pdu: any) => console.log(pdu));
+	// 	client.on(ClientEvents.STATUS_CHANGED, (state: any) => console.log(state));
+	// 	client.setDefaultSingleJob(new Job(pdu1));
+	// 	client.setDefaultMultipleJob(new Job(pdu1, 100, 10));
+	// 	client.sendSingleDefault();
+	// 	client.close().then(() => {
+	// 		console.log("CLOSED");
+	// 		client.doConnect().then(() => {
+	// 			client.doBind().then(() => {
+	// 				client.sendMultipleDefault();
+	// 			}, reason => console.log(reason));
+	// 		}, err => console.log(err));
+	// 	}, err => console.log(err));
+	// });
 
-		// client.on(ClientEvents.ANY_PDU, (pdu: any) => console.log(pdu));
-		client.on(ClientEvents.STATUS_CHANGED, (state: any) => console.log(state));
-		client.setDefaultSingleJob(new Job(pdu1));
-		client.setDefaultMultipleJob(new Job(pdu1, 100, 10));
-		client.sendSingleDefault();
-		client.close().then(() => {
-			console.log("CLOSED");
-			client.doConnect().then(() => {
-				client.doBind().then(() => {
-					client.sendMultipleDefault();
-				}, reason => console.log(reason));
-			}, err => console.log(err));
-		}, err => console.log(err));
-	});
+	let center: Center = new Center(0, 7000, "test", "test");
 }
 
 main();

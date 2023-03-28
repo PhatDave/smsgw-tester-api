@@ -4,6 +4,11 @@ import {Job} from "../Job/Job";
 import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";
 import {SmppSession} from "../SmppSession";
+import {CenterEvents} from "./CenterEvents";
+import CenterStatus from "./CenterStatus";
+
+const NanoTimer = require('nanotimer');
+const smpp = require("smpp");
 
 export class Center implements SmppSession {
 	defaultMultipleJob!: Job;
@@ -11,10 +16,12 @@ export class Center implements SmppSession {
 	password: string;
 	username: string;
 	port: number;
+	status: CenterStatus = CenterStatus.WAITING_CONNECTED;
+	private sessions: any[] = [];
+	private server: any;
 	private eventEmitter: EventEmitter = new EventEmitter();
 	private readonly logger: Logger;
 	private readonly _id: number;
-	private session?: any;
 
 	constructor(id: number, port: number, username: string, password: string) {
 		this._id = id;
@@ -32,6 +39,13 @@ export class Center implements SmppSession {
 		this.defaultMultipleJob = Job.createEmptyMultiple();
 		this.defaultSingleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
 		this.defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
+
+		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
+		this.server.on('error', this.eventSessionError.bind(this));
+		this.server.on('close', this.eventSessionClose.bind(this));
+		this.server.on('pdu', this.eventAnyPdu.bind(this));
+		this.server.listen(this.port);
+		this.status = CenterStatus.WAITING_CONNECTION;
 	}
 
 	cancelSendInterval(): void {
@@ -75,7 +89,10 @@ export class Center implements SmppSession {
 	}
 
 	serialize(): object {
-		throw new Error("NEBI");
+		return {
+			id: this._id, port: this.port, username: this.username, password: this.password, status: this.status,
+			defaultSingleJob: this.defaultSingleJob, defaultMultipleJob: this.defaultMultipleJob,
+		};
 	}
 
 	setDefaultMultipleJob(job: Job): void {
@@ -86,4 +103,27 @@ export class Center implements SmppSession {
 		throw new Error("NEBI");
 	}
 
+	private eventSessionConnected(session: any): void {
+		this.logger.log1(`A client connected to center-${this._id}`);
+		this.sessions.push(session);
+		session.on('close', this.eventSessionClose.bind(this, session));
+		session.on('error', this.eventSessionError.bind(this, session));
+		// session.on('pdu', this.eventAnyPdu.bind(this, session));
+		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
+	}
+
+	private eventSessionError(error: any): void {
+		this.logger.log1(`A client encountered an error on center-${this._id}`);
+	}
+
+	private eventSessionClose(session: any): void {
+		this.logger.log1(`A client disconnected from center-${this._id}`);
+		this.sessions = this.sessions.filter((s: any) => s !== session);
+	}
+
+	private eventAnyPdu(pdu: any): void {
+		console.log("eventAnyPdu");
+		console.log(pdu);
+		this.eventEmitter.emit(CenterEvents.ANY_PDU, pdu);
+	}
 }
