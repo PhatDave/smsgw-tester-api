@@ -5,8 +5,9 @@ import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";
 import {SmppSession} from "../SmppSession";
 import {CenterEvents} from "./CenterEvents";
-import {CenterPDUProcessor} from "./CenterPDUProcessor";
 import CenterStatus from "./CenterStatus";
+import {CenterPDUProcessor} from "./PDUProcessors/CenterPDUProcessor";
+import {DebugProcessor} from "./PDUProcessors/DebugProcessor";
 
 const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
@@ -45,8 +46,12 @@ export class Center implements SmppSession {
 		return this._port;
 	}
 
-	// TODO: Implement a few modes and set this to default DEBUG
-	private _processor: CenterPDUProcessor | undefined;
+	// TODO: Implement processor switching
+	private _processor: CenterPDUProcessor = new DebugProcessor();
+
+	get processor(): CenterPDUProcessor {
+		return this._processor;
+	}
 
 	set processor(value: CenterPDUProcessor) {
 		this._processor = value;
@@ -116,9 +121,6 @@ export class Center implements SmppSession {
 		this._defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
 
 		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
-		this.server.on('error', this.eventSessionError.bind(this));
-		this.server.on('close', this.eventSessionClose.bind(this));
-		this.server.on('pdu', this.eventAnyPdu.bind(this));
 		this.server.listen(this._port);
 		this.status = CenterStatus.WAITING_CONNECTION;
 	}
@@ -300,7 +302,10 @@ export class Center implements SmppSession {
 		}
 	}
 
-	private eventAnyPdu(pdu: any): void {
+	private eventAnyPdu(session: any, pdu: any): void {
 		this.eventEmitter.emit(CenterEvents.ANY_PDU, pdu);
+		this.processor.processPdu(session, pdu).then(() => {
+		}, () => {
+		});
 	}
 }
