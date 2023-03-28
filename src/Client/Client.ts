@@ -4,7 +4,7 @@ import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";
 import PersistentPromise from "../PersistentPromise";
 import {SmppSession} from "../SmppSession";
-import {ClientEvents} from "./ClientEvents";
+import {ClientEvent} from "./ClientEvent";
 import ClientStatus from "./ClientStatus";
 
 const NanoTimer = require('nanotimer');
@@ -16,13 +16,14 @@ const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE
 export class Client implements SmppSession {
 	defaultSingleJob!: Job;
 	defaultMultipleJob!: Job;
-	private readonly eventEmitter: EventEmitter;
+	UPDATE_WS: string = "UPDATE_WS";
+	private readonly eventEmitter: EventEmitter = new EventEmitter();
 	private readonly logger: Logger;
 	private readonly _id: number;
 	private session?: any;
 	private connectPromise: PersistentPromise | null = null;
-	private bindPromise: PersistentPromise | null = null;
 	// TODO: Implement close promise
+	private bindPromise: PersistentPromise | null = null;
 	// Apparently the sessions are not closed on a dime but instead a .close() call causes eventSessionClose
 	private sendTimer: any | null = null;
 	private counterUpdateTimer: any | null = null;
@@ -33,9 +34,13 @@ export class Client implements SmppSession {
 		this._username = username;
 		this._password = password;
 
-		this.eventEmitter = new EventEmitter();
 		this.logger = new Logger(`Client-${id}`);
 		this.status = ClientStatus.NOT_CONNECTED;
+
+		this.eventEmitter.on(ClientEvent.STATE_CHANGED, () => this.updateWs(ClientEvent.STATE_CHANGED));
+		this.eventEmitter.on(ClientEvent.STATUS_CHANGED, () => this.updateWs(ClientEvent.STATUS_CHANGED));
+		this.eventEmitter.on(ClientEvent.ANY_PDU, (pdu: any) => this.updateWs(ClientEvent.ANY_PDU, [pdu]));
+		this.eventEmitter.on(ClientEvent.MESSAGE_SEND_COUNTER_UPDATE_EVENT, (count: number) => this.updateWs(ClientEvent.MESSAGE_SEND_COUNTER_UPDATE_EVENT, [count]));
 
 		this.initialize();
 	}
@@ -62,8 +67,33 @@ export class Client implements SmppSession {
 
 	set status(value: ClientStatus) {
 		this._status = value;
-		this.eventEmitter.emit(ClientEvents.STATUS_CHANGED, this._status);
-		this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(ClientEvent.STATUS_CHANGED, this._status);
+		this.eventEmitter.emit(ClientEvent.STATE_CHANGED, this.serialize());
+	}
+
+	updateWs(event: string, args?: any[]): void {
+		this.logger.log1(`Update WS: ${event}`);
+		let message: {
+			type: string,
+			data?: string
+		} = {
+			type: event,
+		};
+		switch (event) {
+			case ClientEvent.STATE_CHANGED:
+				message.data = JSON.stringify(this.serialize());
+				break;
+			case ClientEvent.STATUS_CHANGED:
+				message.data = JSON.stringify(this._status);
+				break;
+			case ClientEvent.ANY_PDU:
+				message.data = JSON.stringify(args![0]);
+				break;
+			case ClientEvent.MESSAGE_SEND_COUNTER_UPDATE_EVENT:
+				message.data = JSON.stringify(args![0]);
+				break;
+		}
+		this.eventEmitter.emit(this.UPDATE_WS, message);
 	}
 
 	getUrl(): string {
@@ -72,14 +102,14 @@ export class Client implements SmppSession {
 
 	setDefaultSingleJob(job: Job): void {
 		this.defaultSingleJob = job;
-		this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize());
-		job.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
+		this.eventEmitter.emit(ClientEvent.STATE_CHANGED, this.serialize());
+		job.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvent.STATE_CHANGED, this.serialize()));
 	}
 
 	setDefaultMultipleJob(job: Job): void {
 		this.defaultMultipleJob = job;
-		this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize());
-		job.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
+		this.eventEmitter.emit(ClientEvent.STATE_CHANGED, this.serialize());
+		job.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvent.STATE_CHANGED, this.serialize()));
 	}
 
 	getDefaultSingleJob(): Job {
@@ -93,8 +123,8 @@ export class Client implements SmppSession {
 	initialize(): void {
 		this.defaultSingleJob = Job.createEmptySingle();
 		this.defaultMultipleJob = Job.createEmptyMultiple();
-		this.defaultSingleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
-		this.defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
+		this.defaultSingleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvent.STATE_CHANGED, this.serialize()));
+		this.defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvent.STATE_CHANGED, this.serialize()));
 	}
 
 	doConnect(): PersistentPromise {
@@ -180,7 +210,7 @@ export class Client implements SmppSession {
 			this.counterUpdateTimer = new NanoTimer();
 			this.counterUpdateTimer.setInterval(() => {
 				if (previousUpdateCounter !== counter) {
-					this.eventEmitter.emit(ClientEvents.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
+					this.eventEmitter.emit(ClientEvent.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
 					previousUpdateCounter = counter;
 				}
 			}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
@@ -255,7 +285,7 @@ export class Client implements SmppSession {
 
 	private eventAnyPdu(pdu: any): void {
 		this.logger.log6(`Client-${this._id} received PDU: ${JSON.stringify(pdu)}`);
-		this.eventEmitter.emit(ClientEvents.ANY_PDU, pdu);
+		this.eventEmitter.emit(ClientEvent.ANY_PDU, pdu);
 	}
 
 	private eventSessionError(pdu: any): void {

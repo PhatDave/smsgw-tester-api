@@ -8,10 +8,14 @@ export interface SmppSession {
 	password: string,
 	defaultSingleJob: Job;
 	defaultMultipleJob: Job;
+	readonly UPDATE_WS: string;
 
 	getDefaultSingleJob(): Job;
+
 	setDefaultSingleJob(job: Job): void;
+
 	getDefaultMultipleJob(): Job;
+
 	setDefaultMultipleJob(job: Job): void;
 
 	getId(): number;
@@ -19,9 +23,11 @@ export interface SmppSession {
 	sendPdu(pdu: object, force?: boolean): Promise<object>;
 
 	sendSingle(job: Job): Promise<object>;
+
 	sendSingleDefault(): Promise<object>;
 
 	sendMultiple(job: Job): Promise<void>;
+
 	sendMultipleDefault(): Promise<void>;
 
 	cancelSendInterval(): void;
@@ -31,4 +37,8 @@ export interface SmppSession {
 	initialize(): void;
 
 	serialize(): object;
+
+	on(event: string, callback: (...args: any[]) => void): void;
+
+	updateWs(event: string, args?: any[]): void;
 }

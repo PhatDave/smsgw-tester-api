@@ -1,4 +1,4 @@
-export class ClientEvents {
+export class ClientEvent {
 	static STATUS_CHANGED: "STATUS_CHANGED";
 	static STATE_CHANGED: "STATE_CHANGED";
 	static ANY_PDU: "ANY_PDU";

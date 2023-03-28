@@ -3,6 +3,8 @@ import {SmppSession} from "./SmppSession";
 export default interface SessionManager {
 	sessions: SmppSession[];
 	sessionId: number;
+	identifier: string;
+	readonly SESSION_ADDED_EVENT: string;
 
 	addSession(session: SmppSession): Promise<void>;
 
@@ -12,9 +14,13 @@ export default interface SessionManager {
 
 	getSession(id: number): Promise<SmppSession>;
 
+	getSessions(): Promise<SmppSession[]>;
+
 	serialize(): object;
 
 	cleanup(): void;
 
 	setup(): void;
+
+	on(event: string, listener: (...args: any[]) => void): void;
 }

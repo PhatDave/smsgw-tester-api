@@ -1,3 +1,4 @@
+import EventEmitter from "events";
 import fs from "fs";
 import {Client} from "./Client";
 import {Job} from "../Job/Job";
@@ -10,7 +11,10 @@ const CLIENT_SESSIONS_FILE: string = process.env.CLIENT_SESSIONS_FILE || "client
 export default class ClientSessionManager implements SessionManager {
 	sessionId: number;
 	sessions: Client[];
+	identifier: string = "client";
 	private readonly logger: any;
+	readonly SESSION_ADDED_EVENT: string = "SESSION ADDED";
+	private readonly eventEmitter: EventEmitter = new EventEmitter();
 
 	constructor() {
 		this.sessionId = 0;
@@ -18,10 +22,21 @@ export default class ClientSessionManager implements SessionManager {
 		this.logger = new Logger("ClientSessionManager");
 	}
 
+	on(event: string, listener: (...args: any[]) => void): void {
+        this.eventEmitter.on(event, listener);
+    }
+
+	getSessions(): Promise<SmppSession[]> {
+        return new Promise<SmppSession[]>(resolve => {
+			resolve(this.sessions);
+        });
+    }
+
 	addSession(session: SmppSession): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this.logger.log1(`Adding session with id ${session.getId()}`);
 			this.sessions.push(session as Client);
+			this.eventEmitter.emit(this.SESSION_ADDED_EVENT, session.getId());
 			resolve();
 		});
 	}

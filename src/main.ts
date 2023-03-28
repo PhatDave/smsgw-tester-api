@@ -3,6 +3,7 @@ import {Client} from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import {Job} from "./Job/Job";
 import Logger from "./Logger";
+import {WSServer} from "./WS/WSServer";
 
 const smpp = require("smpp");
 const fs = require("fs");
@@ -18,7 +19,6 @@ const {PDU} = require("smpp");
 const app = express();
 
 const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
-const WS_SERVER_PORT: number = Number(process.env.WS_SERVER_PORT) || 8191;
 const CENTER_SESSIONS_FILE: string = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
@@ -29,6 +29,8 @@ let logger = new Logger("main");
 
 let clientManager: ClientSessionManager = new ClientSessionManager();
 clientManager.setup();
+
+let wss: WSServer = new WSServer([clientManager]);
 
 async function main() {
 	// let client: Client = await clientManager.createSession("smpp://localhost:7000", "test", "test") as Client;
@@ -65,7 +67,7 @@ async function main() {
 		// 	destination_addr: "1234567890",
 		// 	short_message: "Hello World"
 		// }), 100, 100));
-		center.close();
+		// center.close();
 	}, 1000);
 }
 
