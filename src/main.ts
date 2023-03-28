@@ -1,4 +1,5 @@
 import {Client} from "./Client/Client";
+import {ClientEvents} from "./Client/ClientEvents";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import {Job} from "./Job";
 import Logger from "./Logger";
@@ -43,7 +44,7 @@ async function main() {
 		client.setDefaultMultipleJob(new Job(pdu1, 100, 10));
 		client.sendMultipleDefault();
 
-		client.on(Client.ClientEvents.ANY_PDU, (pdu: any) => console.log(pdu));
+		client.on(ClientEvents.ANY_PDU, (pdu: any) => console.log(pdu));
 	});
 }
 

@@ -1,9 +1,10 @@
 import EventEmitter from "events";
-import ClientStatus from "./ClientStatus";
 import {Job} from "../Job";
 import Logger from "../Logger";
 import PersistentPromise from "../PersistentPromise";
 import {SmppSession} from "../SmppSession";
+import {ClientEvents} from "./ClientEvents";
+import ClientStatus from "./ClientStatus";
 
 const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
@@ -11,13 +12,7 @@ const smpp = require("smpp");
 const AUTO_ENQUIRE_LINK_PERIOD: number = Number(process.env.AUTO_ENQUIRE_LINK_PERIOD) || 500;
 const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
-export class Client implements SmppSession {
-	public static ClientEvents = {
-		STATUS_CHANGED: "STATUS_CHANGED",
-		STATE_CHANGED: "STATE_CHANGED",
-		ANY_PDU: "ANY_PDU",
-		MESSAGE_SEND_COUNTER_UPDATE_EVENT: "MESSAGE_SEND_COUNTER_UPDATE_EVENT"
-	}
+	export class Client implements SmppSession {
 	defaultSingleJob: Job = Job.createEmptySingle();
 	defaultMultipleJob: Job = Job.createEmptyMultiple();
 	private readonly eventEmitter: EventEmitter;
@@ -68,18 +63,18 @@ export class Client implements SmppSession {
 
 	set status(value: ClientStatus) {
 		this._status = value;
-		this.eventEmitter.emit(Client.ClientEvents.STATUS_CHANGED, this._status);
-		this.eventEmitter.emit(Client.ClientEvents.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(ClientEvents.STATUS_CHANGED, this._status);
+		this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize());
 	}
 
 	setDefaultSingleJob(job: Job): void {
 		this.defaultSingleJob = job;
-		this.eventEmitter.emit(Client.ClientEvents.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize());
 	}
 
 	setDefaultMultipleJob(job: Job): void {
 		this.defaultMultipleJob = job;
-		this.eventEmitter.emit(Client.ClientEvents.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize());
 	}
 
 	getDefaultSingleJob(): Job {
@@ -188,7 +183,7 @@ export class Client implements SmppSession {
 			this.counterUpdateTimer = new NanoTimer();
 			this.counterUpdateTimer.setInterval(() => {
 				if (previousUpdateCounter !== counter) {
-					this.eventEmitter.emit(Client.ClientEvents.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
+					this.eventEmitter.emit(ClientEvents.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
 					previousUpdateCounter = counter;
 				}
 			}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
@@ -263,7 +258,7 @@ export class Client implements SmppSession {
 
 	private eventAnyPdu(pdu: any): void {
 		this.logger.log6(`Client-${this._id} received PDU: ${JSON.stringify(pdu)}`);
-		this.eventEmitter.emit(Client.ClientEvents.ANY_PDU, pdu);
+		this.eventEmitter.emit(ClientEvents.ANY_PDU, pdu);
 	}
 
 	private eventSessionError(pdu: any): void {
