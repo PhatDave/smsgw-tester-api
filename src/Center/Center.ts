@@ -11,12 +11,8 @@ const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
 
 export class Center implements SmppSession {
-	defaultMultipleJob!: Job;
-	defaultSingleJob!: Job;
-	password: string;
-	username: string;
 	port: number;
-	status: CenterStatus = CenterStatus.WAITING_CONNECTED;
+	private pendingSessions: any[] = [];
 	private sessions: any[] = [];
 	private server: any;
 	private eventEmitter: EventEmitter = new EventEmitter();
@@ -26,19 +22,55 @@ export class Center implements SmppSession {
 	constructor(id: number, port: number, username: string, password: string) {
 		this._id = id;
 		this.port = port;
-		this.username = username;
-		this.password = password;
+		this._username = username;
+		this._password = password;
 
 		this.logger = new Logger(`Center-${id}`);
 
 		this.initialize();
 	}
 
+	private _defaultMultipleJob!: Job;
+
+	set defaultMultipleJob(value: Job) {
+		this._defaultMultipleJob = value;
+		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
+	}
+
+	private _defaultSingleJob!: Job;
+
+	set defaultSingleJob(value: Job) {
+		this._defaultSingleJob = value;
+		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
+	}
+
+	private _password: string;
+
+	set password(value: string) {
+		this._password = value;
+		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
+	}
+
+	private _username: string;
+
+	set username(value: string) {
+		this._username = value;
+		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
+	}
+
+	private _status: CenterStatus = CenterStatus.WAITING_CONNECTION;
+
+	set status(value: CenterStatus) {
+		this._status = value;
+		this.eventEmitter.emit(CenterEvents.STATUS_CHANGED, this._status);
+		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
+	}
+
 	initialize(): void {
-		this.defaultSingleJob = Job.createEmptySingle();
-		this.defaultMultipleJob = Job.createEmptyMultiple();
-		this.defaultSingleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
-		this.defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
+		this._defaultSingleJob = Job.createEmptySingle();
+		this._defaultMultipleJob = Job.createEmptyMultiple();
+		this._defaultSingleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
+		this._defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
 
 		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
 		this.server.on('error', this.eventSessionError.bind(this));
@@ -90,8 +122,8 @@ export class Center implements SmppSession {
 
 	serialize(): object {
 		return {
-			id: this._id, port: this.port, username: this.username, password: this.password, status: this.status,
-			defaultSingleJob: this.defaultSingleJob, defaultMultipleJob: this.defaultMultipleJob,
+			id: this._id, port: this.port, username: this._username, password: this._password, status: this._status,
+			defaultSingleJob: this._defaultSingleJob, defaultMultipleJob: this._defaultMultipleJob,
 		};
 	}
 
@@ -103,27 +135,62 @@ export class Center implements SmppSession {
 		throw new Error("NEBI");
 	}
 
+	private eventBindTransciever(session: any, pdu: any) {
+		this.logger.log1(`Center-${this._id} got a bind_transciever with system_id ${pdu.system_id} and password ${pdu.password}`);
+		session.pause();
+		if (pdu.system_id === this.username && pdu.password === this.password) {
+			this.logger.log1(`Center-${this._id} client connection successful`);
+			session.send(pdu.response());
+			session.resume();
+			this.pendingSessions = this.pendingSessions.filter((s) => s !== session);
+			this.sessions.push(session);
+			this.updateStatus();
+		} else {
+			this.logger.log1(`Center-${this._id} client connection failed, invalid credentials`);
+			session.send(pdu.response({
+				command_status: smpp.ESME_RBINDFAIL
+			}));
+			this.pendingSessions = this.pendingSessions.filter((s) => s !== session);
+			this.updateStatus();
+			session.close();
+		}
+	}
+
 	private eventSessionConnected(session: any): void {
 		this.logger.log1(`A client connected to center-${this._id}`);
-		this.sessions.push(session);
+		this.pendingSessions.push(session);
 		session.on('close', this.eventSessionClose.bind(this, session));
 		session.on('error', this.eventSessionError.bind(this, session));
-		// session.on('pdu', this.eventAnyPdu.bind(this, session));
+		session.on('bind_transciever', this.eventBindTransciever.bind(this, session));
+		session.on('pdu', this.eventAnyPdu.bind(this, session));
+		this.updateStatus();
 		this.eventEmitter.emit(CenterEvents.STATE_CHANGED, this.serialize());
 	}
 
-	private eventSessionError(error: any): void {
-		this.logger.log1(`A client encountered an error on center-${this._id}`);
+	private eventSessionError(session: any): void {
+		this.logger.log1(`A client encountered an error on center-${this._id}}`);
 	}
 
 	private eventSessionClose(session: any): void {
 		this.logger.log1(`A client disconnected from center-${this._id}`);
 		this.sessions = this.sessions.filter((s: any) => s !== session);
+		this.pendingSessions = this.pendingSessions.filter((s: any) => s !== session);
+		this.updateStatus();
+	}
+
+	private updateStatus(): void {
+		if (this.sessions.length > 0) {
+			this.status = CenterStatus.CONNECTED;
+		} else if (this.pendingSessions.length > 0) {
+			this.status = CenterStatus.CONNECTING;
+		} else {
+			this.status = CenterStatus.WAITING_CONNECTION;
+		}
 	}
 
 	private eventAnyPdu(pdu: any): void {
 		console.log("eventAnyPdu");
-		console.log(pdu);
+		// console.log(pdu);
 		this.eventEmitter.emit(CenterEvents.ANY_PDU, pdu);
 	}
 }
