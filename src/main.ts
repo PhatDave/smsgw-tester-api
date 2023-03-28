@@ -1,4 +1,6 @@
-import Logger from "./logger";
+import {Client} from "./Client";
+import {Job} from "./Job";
+import Logger from "./Logger";
 
 const smpp = require("smpp");
 const fs = require("fs");
@@ -17,18 +19,20 @@ const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
 const WS_SERVER_PORT: number = Number(process.env.WS_SERVER_PORT) || 8191;
 const CLIENT_SESSIONS_FILE: string = process.env.CLIENT_SESSIONS_FILE || "client_sessions.json";
 const CENTER_SESSIONS_FILE: string = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
-const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
 // TODO: Add support for encodings
 // TODO: Implement some sort of metrics on frontend by counting the pdus
 
 let logger = new Logger("main");
 
-import {Client} from "./client";
-
 let client: Client = new Client(0, "smpp://localhost:7000", "test", "test");
 client.connectAndBind().then(() => {
-    console.log("POGGIES");
+	console.log("POGGIES");
+	client.sendMultiple(new Job(new smpp.PDU('submit_sm', {
+		source_addr: "1234567890",
+		destination_addr: "1234567890",
+		short_message: "Hello World"
+	}), 100, 100))
 });
 
 // class ClientSession {

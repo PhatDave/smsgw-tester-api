@@ -1,16 +1,20 @@
+import {Job} from "./Job";
+
 export interface SmppSession {
-    username: string,
-    password: string,
+	username: string,
+	password: string,
 
-    sendPdu(pdu: object): Promise<object>;
+	sendPdu(pdu: object): Promise<object>;
 
-    sendSingle(Job: object): Promise<object>;
+	sendSingle(job: Job): Promise<object>;
 
-    sendMultiple(Job: object): Promise<object>;
+	sendMultiple(job: Job): Promise<void>;
 
-    close(): Promise<void>;
+	cancelSendInterval(): void;
 
-    initialize(): void;
+	close(): Promise<void>;
 
-    serialize(): string;
+	initialize(): void;
+
+	serialize(): string;
 }
