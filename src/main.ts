@@ -22,44 +22,11 @@ const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE
 // TODO: Add support for encodings
 // TODO: Implement some sort of metrics on frontend by counting the pdus
 
-[
-    'debug',
-    'log',
-    'warn',
-    'error'
-].forEach((methodName: string) => {
-    // @ts-ignore
-    const originalLoggingMethod: object = console[methodName];
-    // @ts-ignore
-    console[methodName] = (firstArgument, ...otherArguments) => {
-        // @ts-ignore
-        const originalPrepareStackTrace = Error.prepareStackTrace;
-        // @ts-ignore
-        Error.prepareStackTrace = (_, stack) => stack;
-        // @ts-ignore
-        const callee = new Error().stack[2];
-        // @ts-ignore
-        Error.prepareStackTrace = originalPrepareStackTrace;
-        // @ts-ignore
-        const relativeFileName = path.relative(process.cwd(), callee.getFileName());
-        // @ts-ignore
-        const prefix = `${relativeFileName}:${callee.getLineNumber()}:`;
-        // @ts-ignore
-        if (typeof firstArgument === 'string') {
-            // @ts-ignore
-            originalLoggingMethod(prefix + ' ' + firstArgument, ...otherArguments);
-        } else {
-            // @ts-ignore
-            originalLoggingMethod(prefix, firstArgument, ...otherArguments);
-        }
-    };
-});
-
 let logger = new Logger("main");
 
 import {Client} from "./client";
 
-let client: Client = new Client(0, "smpp://localhost:7001", "test", "test");
+let client: Client = new Client(0, "smpp://localhost:7000", "test", "test");
 client.connectAndBind().then(() => {
     console.log("POGGIES");
 });

@@ -103,14 +103,16 @@ export class Client implements SmppSession {
 			}
 
 			this.session.bind_transceiver({
-				system_id: this.username, password: this.password,
+				system_id: this._username, password: this._password,
 			}, this.eventBindReply.bind(this));
 		});
 		return this.bindPromise;
 	}
 
 	connectAndBind(): Promise<void> {
-		return this.connect().then(this.bind.bind(this));
+		return this.connect().then(this.bind.bind(this), (error) => {
+			this.logger.log1(`Client-${this.id} connectAndBind failed: ${error}`);
+		});
 	}
 
 	serialize(): string {
@@ -160,10 +162,10 @@ export class Client implements SmppSession {
 		this.eventEmitter.emit(Client.ClientEvents.ANY_PDU, pdu);
 	}
 
-	private eventSessionError(): void {
+	private eventSessionError(pdu: any): void {
 		this.logger.log1(`Client-${this.id} error on ${this._url}`);
 		this.setStatus(ClientStatus.NOT_CONNECTED);
-		this.rejectPromises();
+		this.rejectPromises(pdu);
 	}
 
 	private eventSessionClose(): void {
@@ -183,17 +185,17 @@ export class Client implements SmppSession {
 			this.logger.log1(`Client-${this.id} bind failed to ${this.url}`);
 			this.setStatus(ClientStatus.CONNECTED);
 			if (this.bindPromise) {
-				this.bindPromise.reject();
+				this.bindPromise.reject(pdu);
 			}
 		}
 	}
 
-	private rejectPromises(): void {
+	private rejectPromises(err?: any): void {
 		if (this.connectPromise) {
-			this.connectPromise.reject();
+			this.connectPromise.reject(err);
 		}
 		if (this.bindPromise) {
-			this.bindPromise.reject();
+			this.bindPromise.reject(err);
 		}
 	}
 
