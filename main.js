@@ -247,6 +247,7 @@ class ClientSession {
 				this.eventEmitter.emit(ClientSession.ANY_PDU_EVENT, payload);
 			}
 		});
+		this.session.send();
 		this.session.on('pdu', this.sessionPdu.bind(this));
 		this.connectingPromise.resolve();
 	}

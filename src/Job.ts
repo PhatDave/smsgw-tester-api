@@ -1,5 +1,6 @@
 const smpp = require("smpp");
 
+// TODO: Implement on change event and propagate it to sessions
 export class Job {
     pdu: any;
     perSecond?: number;
@@ -13,6 +14,14 @@ export class Job {
 
     serialize(): string {
         return JSON.stringify(this);
+    }
+
+    static deserialize(serialized: any): Job {
+        if (!serialized.pdu.command) {
+            throw new Error("Invalid serialized job");
+        }
+        let pdu: any = new smpp.PDU(serialized.pdu.command, serialized.pdu);
+        return new Job(pdu, serialized.perSecond, serialized.count);
     }
 
     static createEmptySingle(): Job {
