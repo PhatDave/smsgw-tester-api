@@ -1,5 +1,6 @@
 import EventEmitter from "events";
-import {Job} from "../Job";
+import {Job} from "../Job/Job";
+import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";
 import PersistentPromise from "../PersistentPromise";
 import {SmppSession} from "../SmppSession";
@@ -9,12 +10,12 @@ import ClientStatus from "./ClientStatus";
 const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
 
-const AUTO_ENQUIRE_LINK_PERIOD: number = Number(process.env.AUTO_ENQUIRE_LINK_PERIOD) || 500;
+const AUTO_ENQUIRE_LINK_PERIOD: number = Number(process.env.AUTO_ENQUIRE_LINK_PERIOD) || 30000;
 const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
-	export class Client implements SmppSession {
-	defaultSingleJob: Job = Job.createEmptySingle();
-	defaultMultipleJob: Job = Job.createEmptyMultiple();
+export class Client implements SmppSession {
+	defaultSingleJob!: Job;
+	defaultMultipleJob!: Job;
 	private readonly eventEmitter: EventEmitter;
 	private readonly logger: Logger;
 	private readonly _id: number;
@@ -51,10 +52,6 @@ const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE
 
 	private _url: string;
 
-	getUrl(): string {
-		return this._url;
-	}
-
 	set url(value: string) {
 		this._url = value;
 	}
@@ -67,14 +64,20 @@ const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE
 		this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize());
 	}
 
+	getUrl(): string {
+		return this._url;
+	}
+
 	setDefaultSingleJob(job: Job): void {
 		this.defaultSingleJob = job;
 		this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize());
+		job.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
 	}
 
 	setDefaultMultipleJob(job: Job): void {
 		this.defaultMultipleJob = job;
 		this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize());
+		job.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
 	}
 
 	getDefaultSingleJob(): Job {
@@ -91,7 +94,10 @@ const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE
 	}
 
 	initialize(): void {
-		return;
+		this.defaultSingleJob = Job.createEmptySingle();
+		this.defaultMultipleJob = Job.createEmptyMultiple();
+		this.defaultSingleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
+		this.defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
 	}
 
 	connect(): PersistentPromise {

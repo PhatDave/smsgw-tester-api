@@ -1,6 +1,6 @@
 import fs from "fs";
 import {Client} from "./Client";
-import {Job} from "../Job";
+import {Job} from "../Job/Job";
 import Logger from "../Logger";
 import SessionManager from "../SessionManager";
 import {SmppSession} from "../SmppSession";

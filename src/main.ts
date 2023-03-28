@@ -1,7 +1,7 @@
 import {Client} from "./Client/Client";
 import {ClientEvents} from "./Client/ClientEvents";
 import ClientSessionManager from "./Client/ClientSessionManager";
-import {Job} from "./Job";
+import {Job} from "./Job/Job";
 import Logger from "./Logger";
 
 const smpp = require("smpp");
@@ -40,11 +40,12 @@ async function main() {
 			destination_addr: "1234567890",
 			short_message: "Hello World"
 		});
+		// client.sendMultipleDefault();
+
+		// client.on(ClientEvents.ANY_PDU, (pdu: any) => console.log(pdu));
+		client.on(ClientEvents.STATE_CHANGED, (state: any) => console.log(state.defaultMultipleJob));
 		client.setDefaultSingleJob(new Job(pdu1));
 		client.setDefaultMultipleJob(new Job(pdu1, 100, 10));
-		client.sendMultipleDefault();
-
-		client.on(ClientEvents.ANY_PDU, (pdu: any) => console.log(pdu));
 	});
 }
 

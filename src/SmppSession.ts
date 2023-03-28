@@ -1,4 +1,4 @@
-import {Job} from "./Job";
+import {Job} from "./Job/Job";
 
 // TODO: Implement on change event and propagate it to sessions
 // Do something like "onJobChange" here...
