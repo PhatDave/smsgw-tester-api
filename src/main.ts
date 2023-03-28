@@ -60,6 +60,9 @@ let logger = new Logger("main");
 import {Client} from "./client";
 
 let client: Client = new Client(0, "smpp://localhost:7001", "test", "test");
+client.connectAndBind().then(() => {
+    console.log("POGGIES");
+});
 
 // class ClientSession {
 // 	// TODO: Enable requesting DRs
