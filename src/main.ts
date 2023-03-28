@@ -1,5 +1,5 @@
-import {Client} from "./Client";
-import ClientSessionManager from "./ClientSessionManager";
+import {Client} from "./Client/Client";
+import ClientSessionManager from "./Client/ClientSessionManager";
 import {Job} from "./Job";
 import Logger from "./Logger";
 

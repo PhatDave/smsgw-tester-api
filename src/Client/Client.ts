@@ -1,9 +1,9 @@
 import EventEmitter from "events";
 import ClientStatus from "./ClientStatus";
-import {Job} from "./Job";
-import Logger from "./Logger";
-import PersistentPromise from "./PersistentPromise";
-import {SmppSession} from "./SmppSession";
+import {Job} from "../Job";
+import Logger from "../Logger";
+import PersistentPromise from "../PersistentPromise";
+import {SmppSession} from "../SmppSession";
 
 const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
