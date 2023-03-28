@@ -22,6 +22,8 @@ export class Client implements SmppSession {
 	private session?: any;
 	private connectPromise: PersistentPromise | null = null;
 	private bindPromise: PersistentPromise | null = null;
+	// TODO: Implement close promise
+	// Apparently the sessions are not closed on a dime but instead a .close() call causes eventSessionClose
 	private sendTimer: any | null = null;
 	private counterUpdateTimer: any | null = null;
 
@@ -100,37 +102,30 @@ export class Client implements SmppSession {
 		this.defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(ClientEvents.STATE_CHANGED, this.serialize()));
 	}
 
-	connect(): PersistentPromise {
+	doConnect(): PersistentPromise {
 		this.connectPromise = new PersistentPromise((resolve, reject) => {
 			if (this._status !== ClientStatus.NOT_CONNECTED) {
-				let errorString = `Client already connected`;
+				let errorString = `Client-${this._id} already connected`;
 				this.logger.log1(errorString);
 				reject(errorString);
 				return;
 			}
 
-			this.logger.log1(`Client connecting to ${this._url}`);
+			this.logger.log1(`Client-${this._id} connecting to ${this._url}`);
 			this.setStatus(ClientStatus.CONNECTING);
-			try {
-				this.connectSession();
-			} catch (e) {
-				let errorString = `Client connection failed to ${this._url}`;
-				this.logger.log1(errorString);
-
+			this.connectSession().then(resolve, ((err: any) => {
+				this.logger.log1(`Client-${this._id} connection failed: ${err}`);
 				this.setStatus(ClientStatus.NOT_CONNECTED);
 				this.session.close();
-
-				reject(errorString);
-			}
+				reject(err);
+			}));
 		});
 		return this.connectPromise;
 	}
 
-	bind(): PersistentPromise {
+	doBind(): PersistentPromise {
 		this.bindPromise = new PersistentPromise((resolve, reject) => {
-			if (!this.fieldsAreOk()) {
-				reject();
-			}
+			this.validateFields(reject);
 
 			this.session.bind_transceiver({
 				system_id: this._username, password: this._password,
@@ -141,7 +136,7 @@ export class Client implements SmppSession {
 	}
 
 	connectAndBind(): Promise<void> {
-		return this.connect().then(this.bind.bind(this), (error) => {
+		return this.doConnect().then(this.doBind.bind(this), (error) => {
 			this.logger.log1(`Client-${this._id} connectAndBind failed: ${error}`);
 		});
 	}
@@ -155,7 +150,9 @@ export class Client implements SmppSession {
 
 	close(): Promise<void> {
 		return new Promise((resolve, reject) => {
+			this.logger.log1(`Client-${this._id} closing connection`);
 			this.session.close();
+			this.setStatus(ClientStatus.NOT_CONNECTED);
 			resolve();
 		});
 	}
@@ -240,18 +237,18 @@ export class Client implements SmppSession {
 		return this.sendSingle(this.getDefaultSingleJob());
 	}
 
-	private connectSession(): void {
-		if (!this.fieldsAreOk()) {
-			return;
-		}
-		this.logger.log1(`Client-${this._id} connecting to ${this._url}`);
+	private connectSession(): Promise<void> {
+		return new Promise<void>((resolve, reject) => {
+			this.validateFields(reject);
+			this.logger.log1(`Client-${this._id} connecting to ${this._url}`);
 
-		this.session = smpp.connect({
-			url: this._url, auto_enquire_link_period: AUTO_ENQUIRE_LINK_PERIOD,
-		}, this.eventSessionConnected.bind(this));
-		this.session.on('error', this.eventSessionError.bind(this));
-		this.session.on('close', this.eventSessionClose.bind(this));
-		this.session.on('pdu', this.eventAnyPdu.bind(this));
+			this.session = smpp.connect({
+				url: this._url, auto_enquire_link_period: AUTO_ENQUIRE_LINK_PERIOD,
+			}, this.eventSessionConnected.bind(this));
+			this.session.on('error', this.eventSessionError.bind(this));
+			this.session.on('close', this.eventSessionClose.bind(this));
+			this.session.on('pdu', this.eventAnyPdu.bind(this));
+		});
 	}
 
 	private eventSessionConnected(): void {
@@ -304,20 +301,22 @@ export class Client implements SmppSession {
 		}
 	}
 
-	private fieldsAreOk() {
+	private validateFields(reject: (reason?: any) => void) {
 		if (!this._url) {
-			this.logger.log1(`Client-${this._id} has no url set`);
-			return false;
+			let error = `Client-${this._id} has no url set`;
+			this.logger.log1(error);
+			reject(error);
 		}
 		if (!this._username) {
-			this.logger.log1(`Client-${this._id} has no username set`);
-			return false;
+			let error = `Client-${this._id} has no username set`;
+			this.logger.log1(error);
+			reject(error);
 		}
 		if (!this._password) {
-			this.logger.log1(`Client-${this._id} has no password set`);
-			return false;
+			let error = `Client-${this._id} has no password set`;
+			this.logger.log1(error);
+			reject(error);
 		}
-		return true;
 	}
 
 	private validateSession(reject: (reason?: any) => void) {

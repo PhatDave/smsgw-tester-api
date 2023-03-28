@@ -43,9 +43,18 @@ async function main() {
 		// client.sendMultipleDefault();
 
 		// client.on(ClientEvents.ANY_PDU, (pdu: any) => console.log(pdu));
-		client.on(ClientEvents.STATE_CHANGED, (state: any) => console.log(state.defaultMultipleJob));
+		client.on(ClientEvents.STATUS_CHANGED, (state: any) => console.log(state));
 		client.setDefaultSingleJob(new Job(pdu1));
 		client.setDefaultMultipleJob(new Job(pdu1, 100, 10));
+		client.sendSingleDefault();
+		client.close().then(() => {
+			console.log("CLOSED");
+			client.doConnect().then(() => {
+				client.doBind().then(() => {
+					client.sendMultipleDefault();
+				}, reason => console.log(reason));
+			}, err => console.log(err));
+		}, err => console.log(err));
 	});
 }
 
