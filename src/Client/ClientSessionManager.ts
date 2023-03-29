@@ -14,7 +14,6 @@ export default class ClientSessionManager extends SessionManager {
 	// Identifier is used in websockets to identify the type of session this manager manages
 	identifier: string = "client";
 	readonly logger: Logger = new Logger("ClientSessionManager");
-	readonly eventEmitter: EventEmitter = new EventEmitter();
 
 	constructor() {
 		super();
