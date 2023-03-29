@@ -1,8 +1,8 @@
 import {Center} from "./Center/Center";
 import {Client} from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
-import {Job} from "./Job/Job";
 import Logger from "./Logger";
+import {PduDebugProcessor} from "./PDUProcessor/PduDebugProcessor";
 
 const smpp = require("smpp");
 const fs = require("fs");
@@ -18,7 +18,6 @@ const {PDU} = require("smpp");
 const app = express();
 
 const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
-const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
 // TODO: Add support for encodings
 // TODO: Implement some sort of metrics on frontend by counting the pdus
@@ -52,18 +51,20 @@ async function main() {
 	// });
 
 	let center: Center = new Center(0, 7000, "test", "test");
-	setTimeout(() => {
-		center.sendMultiple(new Job(new PDU("deliver_sm", {
-			source_addr: "1234567890",
-			destination_addr: "1234567890",
-			short_message: "Hello World"
-		}), 10, 100));
-		// center.close();
-	}, 5000);
-
-	client.connectAndBind().then(() => {
-		console.log("POGGIES");
-	});
+	// setInterval(() => {
+	// 	client.connectAndBind().then(() => {
+	// 		console.log("POGGIES");
+	// 		client.close();
+	// 	});
+	// }, 1000);
+	// setTimeout(() => {
+	// 	center.sendMultiple(new Job(new PDU("deliver_sm", {
+	// 		source_addr: "1234567890",
+	// 		destination_addr: "1234567890",
+	// 		short_message: "Hello World"
+	// 	}), 10, 100));
+	// 	// center.close();
+	// }, 5000);
 }
 
 main();

@@ -8,7 +8,6 @@ const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
 
 const AUTO_ENQUIRE_LINK_PERIOD: number = Number(process.env.AUTO_ENQUIRE_LINK_PERIOD) || 30000;
-const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
 export class Client extends SmppSession {
 	readonly STATUS: string[] = [
@@ -103,12 +102,8 @@ export class Client extends SmppSession {
 	}
 
 	close(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.logger.log1(`Client-${this.getId()} closing connection`);
-			this.session.close();
-			this.setStatus(0);
-			resolve();
-		});
+		this.logger.log1(`Client-${this.getId()} closing connection`);
+		return Promise.resolve(this.session.close());
 	}
 
 	sendPdu(pdu: object, force?: boolean): Promise<object> {
@@ -141,7 +136,7 @@ export class Client extends SmppSession {
 					this.eventEmitter.emit(this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
 					previousUpdateCounter = counter;
 				}
-			}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
+			}, '', `${this.MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
 
 			let count = job.count || 1;
 			let interval = 1 / (job.perSecond || 1);

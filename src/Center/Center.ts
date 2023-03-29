@@ -2,7 +2,6 @@ import {Job} from "../Job/Job";
 import Logger from "../Logger";
 import {PduProcessor} from "../PDUProcessor/PduProcessor";
 import {SmppSession} from "../SmppSession";
-import CenterStatus from "./CenterStatus";
 
 const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
@@ -180,11 +179,11 @@ export class Center extends SmppSession {
 
 	private updateStatus(): void {
 		if (this.sessions.length > 0) {
-			this.status = CenterStatus.CONNECTED;
+			this.setStatus(2);
 		} else if (this.pendingSessions.length > 0) {
-			this.status = CenterStatus.CONNECTING;
+			this.setStatus(1);
 		} else {
-			this.status = CenterStatus.WAITING_CONNECTION;
+			this.setStatus(0);
 		}
 	}
 }
