@@ -78,7 +78,6 @@ export abstract class RequestHandler {
 
 	doConfigureManyJob(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			let perSecond: number = 1 / (req.body.interval / 1000)
 			let job: Job = session.getDefaultMultipleJob();
 			if (!job.pdu.source_addr && job.pdu.source_addr !== req.body.source) {
 				job.pdu.source_addr = req.body.source;
@@ -89,8 +88,8 @@ export abstract class RequestHandler {
 			if (!job.pdu.short_message && job.pdu.short_message !== req.body.message) {
 				job.pdu.short_message = req.body.message;
 			}
-			if (!job.perSecond && job.perSecond !== perSecond) {
-				job.perSecond = perSecond;
+			if (!job.perSecond && job.perSecond !== req.body.perSecond) {
+				job.perSecond = req.body.perSecond;
 			}
 			if (!job.count && job.count !== req.body.count) {
 				job.count = req.body.count;
