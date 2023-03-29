@@ -61,6 +61,24 @@ export class Job {
 		return new Job({}, 1, 1);
 	}
 
+	update(req: any) {
+		if (req.body.source != this._pdu.source_addr) {
+			this._pdu.source_addr = req.body.source;
+		}
+		if (req.body.destination != this._pdu.destination_addr) {
+			this._pdu.destination_addr = req.body.destination;
+		}
+		if (req.body.message != this._pdu.short_message) {
+			this._pdu.short_message = req.body.message;
+		}
+		if (!!req.body.perSecond && req.body.perSecond != this._perSecond) {
+			this._perSecond = req.body.perSecond;
+		}
+		if (!!req.body.count && req.body.count != this._count) {
+			this._count = req.body.count;
+		}
+	}
+
 	serialize(): object {
 		return {
 			pdu: this.pdu,
