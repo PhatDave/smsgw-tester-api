@@ -36,8 +36,8 @@ export class Center extends SmppSession {
 		this.password = password;
 		this.port = port;
 
-		this.setDefaultSingleJob(Job.createEmptySingle());
-		this.setDefaultMultipleJob(Job.createEmptyMultiple());
+		this.defaultSingleJob = Job.createEmptySingle();
+		this.defaultMultipleJob = Job.createEmptyMultiple();
 
 		this.logger = new Logger(`Center-${id}`);
 

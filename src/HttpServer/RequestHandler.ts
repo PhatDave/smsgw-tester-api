@@ -8,13 +8,13 @@ export abstract class RequestHandler {
 	logger: Logger = new Logger(this.constructor.name);
 
 	doGet(req: any, res: any): void {
-		this.logger.log1("Getting client sessions");
+		this.logger.log1(`Getting sessions`);
 		res.send(this.sessionManager.serialize());
 	}
 
 	doGetById(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			this.logger.log1(`Client session found with ID ${req.params.id}`)
+			this.logger.log1(`Session found with ID ${req.params.id}`)
 			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}
@@ -33,18 +33,19 @@ export abstract class RequestHandler {
 	}
 
 	doConfigureSingleJob(req: any, res: any): void {
-		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
+		this.sessionManager.getSession(Number(req.params.id)).then((session: SmppSession) => {
 			let job: Job = session.getDefaultSingleJob();
-			if (job.pdu.source_addr && job.pdu.source_addr !== req.body.source) {
+			if (job.pdu.source_addr !== req.body.source) {
 				job.pdu.source_addr = req.body.source;
 			}
-			if (job.pdu.destination_addr && job.pdu.destination_addr !== req.body.destination) {
+			if (job.pdu.destination_addr !== req.body.destination) {
 				job.pdu.destination_addr = req.body.destination;
 			}
-			if (job.pdu.short_message && job.pdu.short_message !== req.body.message) {
+			if (job.pdu.short_message !== req.body.message) {
 				job.pdu.short_message = req.body.message;
 			}
-			this.logger.log1(`Updating default job on session with ID ${req.params.id}`)
+			this.logger.log1(`Updating default job on session with ID ${req.params.id}`);
+			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}
 

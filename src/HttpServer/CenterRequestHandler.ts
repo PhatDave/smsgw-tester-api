@@ -45,11 +45,11 @@ export class CenterRequestHandler extends RequestHandler {
 	}
 
 	doPost(req: any, res: any): void {
-		this.logger.log1("Creating client session");
+		this.logger.log1("Creating center session");
 		this.sessionManager.createSession(req.body.port, req.body.username, req.body.password).then((session: SmppSession) => {
 			res.send(session.serialize());
 		}, (err: any) => {
-			this.logger.log1(`Failed to create client session: ${err}`);
+			this.logger.log1(`Failed to create center session: ${err}`);
 			res.status(500).send();
 		});
 	}

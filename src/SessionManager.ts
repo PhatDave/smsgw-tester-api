@@ -46,7 +46,7 @@ export abstract class SessionManager {
 	getSession(id: number): Promise<SmppSession> {
 		return new Promise<SmppSession>((resolve, reject) => {
 			this.logger.log1(`Looking for session with id ${id}...`);
-			let session: SmppSession | undefined = this.sessions.find(s => s.getId() === id);
+			let session: SmppSession | undefined = this.sessions.find(s => s.getId() == id);
 			if (session) {
 				this.logger.log1(`Found session with id ${id}`);
 				resolve(session);
