@@ -136,12 +136,18 @@ export abstract class SmppSession {
 	}
 
 	addPduProcessor(pduProcessor: PduProcessor): void {
-		this.pduProcessors.push(pduProcessor);
-		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+		if (this.pduProcessors.indexOf(pduProcessor) === -1) {
+			this.pduProcessors.push(pduProcessor);
+			this.logger.log1(`Adding PDU processor: ${pduProcessor.constructor.name}-${this.getId()}, now active: ${this.pduProcessors.length} processors`);
+			this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+		} else {
+			this.logger.log1(`PDU processor: ${pduProcessor.constructor.name}-${this.getId()} already attached to session`);
+		}
 	}
 
 	removePduProcessor(pduProcessor: PduProcessor): void {
 		this.pduProcessors = this.pduProcessors.splice(this.pduProcessors.indexOf(pduProcessor), 1);
+		this.logger.log1(`Removing PDU processor: ${pduProcessor.constructor.name}-${this.getId()}, now active: ${this.pduProcessors.length} processors`);
 		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
 	}
 

@@ -98,6 +98,7 @@ export class Client extends SmppSession {
 			status: this.status,
 			defaultSingleJob: this.defaultSingleJob,
 			defaultMultipleJob: this.defaultMultipleJob,
+			processors: this.pduProcessors.map(p => p.serialize()),
 		};
 	}
 

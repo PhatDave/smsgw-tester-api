@@ -1,5 +1,6 @@
 import {Job} from "../Job/Job";
 import Logger from "../Logger";
+import {DebugPduProcessor} from "../PDUProcessor/DebugPduProcessor";
 import {PduProcessor} from "../PDUProcessor/PduProcessor";
 import {SmppSession} from "../SmppSession";
 
@@ -90,6 +91,7 @@ export class Center extends SmppSession {
 	initialize(): void {
 		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
 		this.server.listen(this.port);
+		PduProcessor.attachProcessor(this, PduProcessor.getProcessor(DebugPduProcessor.name));
 		this.setStatus(0);
 	}
 
@@ -111,6 +113,7 @@ export class Center extends SmppSession {
 			status: this.status,
 			defaultSingleJob: this.defaultSingleJob,
 			defaultMultipleJob: this.defaultMultipleJob,
+			processors: this.pduProcessors.map(p => p.serialize()),
 		};
 	}
 

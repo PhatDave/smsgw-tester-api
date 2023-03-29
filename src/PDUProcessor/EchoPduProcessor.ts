@@ -1,20 +1,14 @@
-import Logger from "../../Logger";
-import {CenterPDUProcessor} from "./CenterPDUProcessor";
-
+import {Center} from "../Center/Center";
+import {PduProcessor} from "./PduProcessor";
 const smpp = require("smpp");
 
-export class DebugProcessor implements CenterPDUProcessor {
-	private logger: Logger;
-
-	constructor() {
-		this.logger = new Logger('DebugProcessor');
-	}
-
-	processPdu(session: any, pdu: any): Promise<any> {
+export class EchoPduProcessor extends PduProcessor {
+    servesSessionType: string = Center.name;
+	processPdu(session: any, pdu: any, ...args: any[]): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
 			let promises = [];
 			let replyPromise = session.send(pdu.response());
-			let sendPromise = session.send(new smpp.PDU('enquire_link', {
+			let sendPromise = session.send(new smpp.PDU('deliver_sm', {
 				source_addr: pdu.destination_addr,
 				destination_addr: pdu.source_addr,
 				short_message: pdu.short_message

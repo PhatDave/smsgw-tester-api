@@ -1,8 +1,12 @@
 import {Center} from "./Center/Center";
+import {CenterSessionManager} from "./Center/CenterSessionManager";
 import {Client} from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
+import {Job} from "./Job/Job";
 import Logger from "./Logger";
-import {PduDebugProcessor} from "./PDUProcessor/PduDebugProcessor";
+import {DebugPduProcessor} from "./PDUProcessor/DebugPduProcessor";
+import {EchoPduProcessor} from "./PDUProcessor/EchoPduProcessor";
+import {PduProcessor} from "./PDUProcessor/PduProcessor";
 
 const smpp = require("smpp");
 const fs = require("fs");
@@ -24,14 +28,31 @@ const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
 
 let logger = new Logger("main");
 
+PduProcessor.addProcessor(DebugPduProcessor);
+PduProcessor.addProcessor(EchoPduProcessor);
+
 let clientManager: ClientSessionManager = new ClientSessionManager();
-clientManager.setup();
+let centerManager: CenterSessionManager = new CenterSessionManager();
 
 // let wss: WSServer = new WSServer([clientManager]);
 
 async function main() {
 	let client: Client = await clientManager.createSession("smpp://localhost:7000", "test", "test") as Client;
-	// let client: Client = await clientManager.getSession(0) as Client;
+	let center: Center = await centerManager.createSession(7000, "test", "test") as Center;
+
+	let debugJobSingle = new Job(new PDU("submit_sm", {
+		source_addr: "1234567890",
+		destination_addr: "1234567890",
+		short_message: "Hello World"
+	}));
+	let debugJobMulti = new Job(new PDU("submit_sm", {
+		source_addr: "1234567890",
+		destination_addr: "1234567890",
+		short_message: "Hello World"
+	}), 10, 50);
+
+	client.setDefaultSingleJob(debugJobSingle);
+	client.setDefaultMultipleJob(debugJobMulti);
 
 	// 	// client.sendMultipleDefault();
 	//
@@ -50,7 +71,6 @@ async function main() {
 	// 	}, err => console.log(err));
 	// });
 
-	let center: Center = new Center(0, 7000, "test", "test");
 	// setInterval(() => {
 	// 	client.connectAndBind().then(() => {
 	// 		console.log("POGGIES");
@@ -65,6 +85,10 @@ async function main() {
 	// 	}), 10, 100));
 	// 	// center.close();
 	// }, 5000);
+
+	// client.connectAndBind().then(() => {
+	// 	client.sendMultipleDefault();
+	// });
 }
 
 main();
