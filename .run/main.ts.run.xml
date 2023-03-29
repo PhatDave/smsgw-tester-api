@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="main.ts" type="TypeScriptProgramRunner" factoryName="TypeScript">
+    <module name="smsgwtester" />
+    <envs>
+      <env name="LOG_LEVEL" value="4" />
+    </envs>
+    <option name="interpreterRef" value="project" />
+    <option name="enabledTsNodeEsmLoader" value="false" />
+    <option name="interpreterOptions" value="" />
+    <option name="workingDirectory" value="C:\Users\Administrator\WebstormProjects\smsgwtester\src" />
+    <option name="tsconfigFile" value="" />
+    <option name="extraTypeScriptOptions" value="" />
+    <option name="scriptName" value="$PROJECT_DIR$/src/main.ts" />
+    <option name="programParameters" value="" />
+    <option name="tsnodePackage" value="C:\Program Files\nodejs\node_modules\ts-node" />
+    <method v="2" />
+  </configuration>
+</component>
