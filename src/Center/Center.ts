@@ -1,10 +1,8 @@
 import EventEmitter from "events";
-import {ClientEvent} from "../Client/ClientEvent";
 import {Job} from "../Job/Job";
 import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";
 import {SmppSession} from "../SmppSession";
-import {CenterEvent} from "./CenterEvent";
 import CenterStatus from "./CenterStatus";
 import {CenterPDUProcessor} from "./PDUProcessors/CenterPDUProcessor";
 import {DebugProcessor} from "./PDUProcessors/DebugProcessor";
@@ -15,6 +13,12 @@ const smpp = require("smpp");
 const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
 export class Center implements SmppSession {
+	static EVENTS: any = {
+		STATUS_CHANGED: "STATUS_CHANGED",
+		STATE_CHANGED: "STATE_CHANGED",
+		ANY_PDU: "ANY_PDU",
+		MESSAGE_SEND_COUNTER_UPDATE_EVENT: "MESSAGE_SEND_COUNTER_UPDATE_EVENT",
+	}
 	UPDATE_WS: string = "UPDATE_WS";
 	private pendingSessions: any[] = [];
 	private sessions: any[] = [];
@@ -34,16 +38,10 @@ export class Center implements SmppSession {
 
 		this.logger = new Logger(`Center-${id}`);
 
-		// This does not work and I have not a clue as to why
-		// CenterEvent is undefined in fucking everywhere ever
-		// I don't get it at all
-		// I tried to bind the functions to this
-		// I tried to bind them to the event
-		// TODO: Fix this shit...
-		this.eventEmitter.on(CenterEvent.STATE_CHANGED, () => this.updateWs(CenterEvent.STATE_CHANGED));
-		this.eventEmitter.on(CenterEvent.STATUS_CHANGED, () => this.updateWs(CenterEvent.STATUS_CHANGED));
-		this.eventEmitter.on(CenterEvent.ANY_PDU, (pdu: any) => this.updateWs(CenterEvent.ANY_PDU, [pdu]));
-		this.eventEmitter.on(CenterEvent.MESSAGE_SEND_COUNTER_UPDATE_EVENT, (count: number) => this.updateWs(CenterEvent.MESSAGE_SEND_COUNTER_UPDATE_EVENT, [count]));
+		this.eventEmitter.on(Center.EVENTS.STATE_CHANGED, () => this.updateWs(Center.EVENTS.STATE_CHANGED));
+		this.eventEmitter.on(Center.EVENTS.STATUS_CHANGED, () => this.updateWs(Center.EVENTS.STATUS_CHANGED));
+		this.eventEmitter.on(Center.EVENTS.ANY_PDU, (pdu: any) => this.updateWs(Center.EVENTS.ANY_PDU, [pdu]));
+		this.eventEmitter.on(Center.EVENTS.MESSAGE_SEND_COUNTER_UPDATE_EVENT, (count: number) => this.updateWs(Center.EVENTS.MESSAGE_SEND_COUNTER_UPDATE_EVENT, [count]));
 
 		this.initialize();
 	}
@@ -67,7 +65,7 @@ export class Center implements SmppSession {
 
 	set processor(value: CenterPDUProcessor) {
 		this._processor = value;
-		this.eventEmitter.emit(CenterEvent.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(Center.EVENTS.STATE_CHANGED, this.serialize());
 	}
 
 	private _defaultMultipleJob!: Job;
@@ -78,7 +76,7 @@ export class Center implements SmppSession {
 
 	set defaultMultipleJob(value: Job) {
 		this._defaultMultipleJob = value;
-		this.eventEmitter.emit(CenterEvent.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(Center.EVENTS.STATE_CHANGED, this.serialize());
 	}
 
 	private _defaultSingleJob!: Job;
@@ -89,7 +87,7 @@ export class Center implements SmppSession {
 
 	set defaultSingleJob(value: Job) {
 		this._defaultSingleJob = value;
-		this.eventEmitter.emit(CenterEvent.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(Center.EVENTS.STATE_CHANGED, this.serialize());
 	}
 
 	private _password: string;
@@ -100,7 +98,7 @@ export class Center implements SmppSession {
 
 	set password(value: string) {
 		this._password = value;
-		this.eventEmitter.emit(CenterEvent.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(Center.EVENTS.STATE_CHANGED, this.serialize());
 	}
 
 	private _username: string;
@@ -111,7 +109,7 @@ export class Center implements SmppSession {
 
 	set username(value: string) {
 		this._username = value;
-		this.eventEmitter.emit(CenterEvent.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(Center.EVENTS.STATE_CHANGED, this.serialize());
 	}
 
 	private _status: CenterStatus = CenterStatus.WAITING_CONNECTION;
@@ -122,8 +120,8 @@ export class Center implements SmppSession {
 
 	set status(value: CenterStatus) {
 		this._status = value;
-		this.eventEmitter.emit(CenterEvent.STATUS_CHANGED, this._status);
-		this.eventEmitter.emit(CenterEvent.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(Center.EVENTS.STATUS_CHANGED, this._status);
+		this.eventEmitter.emit(Center.EVENTS.STATE_CHANGED, this.serialize());
 	}
 
 	on(event: string, callback: (...args: any[]) => void): void {
@@ -139,16 +137,16 @@ export class Center implements SmppSession {
 			type: event,
 		};
 		switch (event) {
-			case CenterEvent.STATE_CHANGED:
+			case Center.EVENTS.STATE_CHANGED:
 				message.data = JSON.stringify(this.serialize());
 				break;
-			case CenterEvent.STATUS_CHANGED:
+			case Center.EVENTS.STATUS_CHANGED:
 				message.data = JSON.stringify(this._status);
 				break;
-			case CenterEvent.ANY_PDU:
+			case Center.EVENTS.ANY_PDU:
 				message.data = JSON.stringify(args![0]);
 				break;
-			case CenterEvent.MESSAGE_SEND_COUNTER_UPDATE_EVENT:
+			case Center.EVENTS.MESSAGE_SEND_COUNTER_UPDATE_EVENT:
 				message.data = JSON.stringify(args![0]);
 				break;
 		}
@@ -158,8 +156,8 @@ export class Center implements SmppSession {
 	initialize(): void {
 		this._defaultSingleJob = Job.createEmptySingle();
 		this._defaultMultipleJob = Job.createEmptyMultiple();
-		this._defaultSingleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(CenterEvent.STATE_CHANGED, this.serialize()));
-		this._defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(CenterEvent.STATE_CHANGED, this.serialize()));
+		this._defaultSingleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(Center.EVENTS.STATE_CHANGED, this.serialize()));
+		this._defaultMultipleJob.on(JobEvents.STATE_CHANGED, () => this.eventEmitter.emit(Center.EVENTS.STATE_CHANGED, this.serialize()));
 
 		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
 		this.server.listen(this._port);
@@ -210,7 +208,7 @@ export class Center implements SmppSession {
 			this.counterUpdateTimer = new NanoTimer();
 			this.counterUpdateTimer.setInterval(() => {
 				if (previousUpdateCounter !== counter) {
-					this.eventEmitter.emit(ClientEvent.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
+					this.eventEmitter.emit(Center.EVENTS.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
 					previousUpdateCounter = counter;
 				}
 			}, '', `${MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
@@ -318,7 +316,7 @@ export class Center implements SmppSession {
 		session.on('bind_transceiver', this.eventBindTransceiver.bind(this, session));
 		session.on('pdu', this.eventAnyPdu.bind(this, session));
 		this.updateStatus();
-		this.eventEmitter.emit(CenterEvent.STATE_CHANGED, this.serialize());
+		this.eventEmitter.emit(Center.EVENTS.STATE_CHANGED, this.serialize());
 	}
 
 	private eventSessionError(session: any): void {
@@ -344,7 +342,7 @@ export class Center implements SmppSession {
 	}
 
 	private eventAnyPdu(session: any, pdu: any): void {
-		this.eventEmitter.emit(CenterEvent.ANY_PDU, pdu);
+		this.eventEmitter.emit(Center.EVENTS.ANY_PDU, pdu);
 		this.processor.processPdu(session, pdu).then(() => {
 		}, () => {
 		});
