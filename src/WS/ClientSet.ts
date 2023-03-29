@@ -61,6 +61,6 @@ export class ClientSet {
 	}
 
 	private attachListener(session: SmppSession) {
-		session.on(session.UPDATE_WS, (message: string) => this.notifyClients(message));
+		session.on(session.UPDATE_WS, (message: object) => this.notifyClients(JSON.stringify(message)));
 	}
 }

@@ -1,4 +1,5 @@
 import EventEmitter from "events";
+import * as repl from "repl";
 import {Job} from "../Job/Job";
 import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";
@@ -220,9 +221,7 @@ export class Center implements SmppSession {
 				if (count > 0 && counter >= count) {
 					this.cancelSendInterval();
 				} else {
-					this.sendPdu(job.pdu, true)
-						.then(() => {
-						}, err => this.logger.log1(`Error sending message: ${err}`));
+					this.sendPdu(job.pdu, true);
 					counter++;
 				}
 			}, '', `${interval} s`);
@@ -240,7 +239,9 @@ export class Center implements SmppSession {
 				this.validateSessions(reject);
 			}
 			this.logger.log5(`Center-${this._id} sending PDU: ${JSON.stringify(pdu)}`);
-			this.getNextSession().send(pdu, (replyPdu: object) => resolve(replyPdu), (err: object) => reject(err));
+			this.getNextSession().send(pdu, (replyPdu: any) => {
+				resolve(replyPdu);
+			});
 		});
 	}
 
@@ -320,7 +321,7 @@ export class Center implements SmppSession {
 	}
 
 	private eventSessionError(session: any): void {
-		this.logger.log1(`A client encountered an error on center-${this._id}}`);
+		this.logger.log1(`A client encountered an error on center-${this._id}`);
 	}
 
 	private eventSessionClose(session: any): void {

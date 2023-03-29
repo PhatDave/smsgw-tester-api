@@ -106,7 +106,7 @@ export default class ClientSessionManager implements SessionManager {
 			this.logger.log1(`Loading clients from ${CLIENT_SESSIONS_FILE}`)
 			let sessions: Buffer = fs.readFileSync(CLIENT_SESSIONS_FILE);
 			let loadedSessions: any[] = JSON.parse(String(sessions));
-			this.logger.log1(`Loaded ${sessions.length} clients from ${CLIENT_SESSIONS_FILE}`);
+			this.logger.log1(`Loaded ${loadedSessions.length} clients from ${CLIENT_SESSIONS_FILE}`);
 			loadedSessions.forEach(session => {
 				this.createSession(session.url, session.username, session.password).then((sessionObj: SmppSession) => {
 					sessionObj.setDefaultSingleJob(Job.deserialize(session.defaultSingleJob));
