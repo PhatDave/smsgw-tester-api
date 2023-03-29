@@ -58,6 +58,10 @@ export class HttpServer {
 		this.app.post('/api/center/processors', this.centerRequestHandler.doAddProcessor.bind(this.centerRequestHandler));
 		this.app.delete('/api/center/processors', this.centerRequestHandler.doRemoveProcessor.bind(this.centerRequestHandler));
 
+		this.app.get('/api/ping', function (req: any, res: any) {
+			res.send('pong');
+		});
+
 		this.server = this.app.listen(SERVER_PORT, function () {
 			// @ts-ignore
 			this.logger.log1(`HTTPServer listening at http://localhost:${SERVER_PORT}`)
