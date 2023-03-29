@@ -61,8 +61,12 @@ export class Job {
 		return new Job({}, 1, 1);
 	}
 
-	serialize(): string {
-		return JSON.stringify(this);
+	serialize(): object {
+		return {
+			pdu: JSON.stringify(this.pdu),
+			perSecond: this.perSecond,
+			count: this.count
+		};
 	}
 
 	on(event: string, callback: (...args: any[]) => void): void {
