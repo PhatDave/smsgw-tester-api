@@ -47,7 +47,11 @@ export class Job {
 
 	static deserialize(serialized: any): Job {
 		if (!serialized.pdu || !serialized.pdu.command) {
-			return Job.createEmptyMultiple();
+			if (!serialized.perSecond && !serialized.count) {
+				return Job.createEmptySingle();
+			} else {
+				return Job.createEmptyMultiple();
+			}
 		}
 		let pdu: any = new smpp.PDU(serialized.pdu.command, serialized.pdu);
 		return new Job(pdu, serialized.perSecond, serialized.count);
@@ -61,7 +65,7 @@ export class Job {
 		return new Job({}, 1, 1);
 	}
 
-	update(req: any) {
+	update(req: any): void {
 		if (req.body.source != this._pdu.source_addr) {
 			this._pdu.source_addr = req.body.source;
 		}
@@ -71,10 +75,10 @@ export class Job {
 		if (req.body.message != this._pdu.short_message) {
 			this._pdu.short_message = req.body.message;
 		}
-		if (!!req.body.perSecond && req.body.perSecond != this._perSecond) {
+		if (!!this._perSecond && !!req.body.perSecond && req.body.perSecond != this._perSecond) {
 			this._perSecond = req.body.perSecond;
 		}
-		if (!!req.body.count && req.body.count != this._count) {
+		if (!!this._count && !!req.body.count && req.body.count != this._count) {
 			this._count = req.body.count;
 		}
 	}

@@ -57,6 +57,24 @@ export abstract class SessionManager {
 		});
 	}
 
+	setup(): void {
+		try {
+			this.logger.log1(`Loading ${this.ManagedSessionClass.name} from ${this.StorageFile}`)
+			let sessions: Buffer = fs.readFileSync(this.StorageFile);
+			let loadedSessions: any[] = JSON.parse(String(sessions));
+			this.logger.log1(`Loaded ${loadedSessions.length} clients from ${this.StorageFile}`);
+			loadedSessions.forEach(session => {
+				this.createSession(session.url || session.port, session.username, session.password).then((sessionObj: SmppSession) => {
+					sessionObj.setDefaultSingleJob(Job.deserialize(session.defaultSingleJob));
+					sessionObj.setDefaultMultipleJob(Job.deserialize(session.defaultMultipleJob));
+				});
+			});
+		} catch (e) {
+			this.logger.log1(`Error loading centers from ${this.StorageFile}: ${e}`);
+			return;
+		}
+	}
+
 	createSession(arg: any, username: string, password: string): Promise<SmppSession> {
 		return new Promise<SmppSession>((resolve, reject) => {
 			this.logger.log1(`Creating session of type ${this.ManagedSessionClass.name} with arg ${arg}`);
@@ -77,27 +95,9 @@ export abstract class SessionManager {
 
 	verifyField(field: string, reject: (reason?: any) => void) {
 		if (!field) {
-			let error = `Request to make a new client failed because of missing ${field}.`;
+			let error = `Request to make a new session failed because of missing ${field}.`;
 			this.logger.log1(error);
 			reject(error);
-		}
-	}
-
-	setup(): void {
-		try {
-			this.logger.log1(`Loading ${this.ManagedSessionClass.name} from ${this.StorageFile}`)
-			let sessions: Buffer = fs.readFileSync(this.StorageFile);
-			let loadedSessions: any[] = JSON.parse(String(sessions));
-			this.logger.log1(`Loaded ${loadedSessions.length} clients from ${this.StorageFile}`);
-			loadedSessions.forEach(session => {
-				this.createSession(session.url, session.username, session.password).then((sessionObj: SmppSession) => {
-					sessionObj.setDefaultSingleJob(Job.deserialize(session.defaultSingleJob));
-					sessionObj.setDefaultMultipleJob(Job.deserialize(session.defaultMultipleJob));
-				});
-			});
-		} catch (e) {
-			this.logger.log1(`Error loading centers from ${this.StorageFile}: ${e}`);
-			return;
 		}
 	}
 
