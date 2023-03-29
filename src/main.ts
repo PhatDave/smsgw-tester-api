@@ -3,7 +3,6 @@ import {Client} from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import {Job} from "./Job/Job";
 import Logger from "./Logger";
-import {WSServer} from "./WS/WSServer";
 
 const smpp = require("smpp");
 const fs = require("fs");
@@ -19,7 +18,6 @@ const {PDU} = require("smpp");
 const app = express();
 
 const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
-const CENTER_SESSIONS_FILE: string = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
 
 // TODO: Add support for encodings

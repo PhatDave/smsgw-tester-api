@@ -273,6 +273,10 @@ export class Center implements SmppSession {
 		this.defaultSingleJob = job;
 	}
 
+	getPort(): number {
+		return this.port;
+	}
+
 	private validateSessions(reject: (reason?: any) => void) {
 		if (this.sessions.length === 0) {
 			reject(`No clients connected`);

@@ -1,6 +1,7 @@
 import Logger from "../Logger";
-import SessionManager from "../SessionManager";
+import {SessionManager} from "../SessionManager";
 import {ClientSet} from "./ClientSet";
+
 const WebSocket = require("ws");
 
 const WS_SERVER_PORT: number = Number(process.env.WS_SERVER_PORT) || 8191;
