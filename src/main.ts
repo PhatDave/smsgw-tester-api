@@ -25,6 +25,7 @@ let httpServer: HttpServer = new HttpServer(clientManager, centerManager);
 function cleanup(): void {
 	logger.log1("Cleaning up...");
 	clientManager.cleanup();
+	centerManager.cleanup();
 	process.exit(0);
 }
 
