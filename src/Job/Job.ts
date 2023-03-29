@@ -1,9 +1,9 @@
 import EventEmitter from "events";
-import {JobEvents} from "./JobEvents";
 
 const smpp = require("smpp");
 
 export class Job {
+	static readonly STATE_CHANGED: string = "STATE_CHANGED";
 	private eventEmitter: EventEmitter = new EventEmitter();
 
 	constructor(pdu: any, perSecond?: number, count?: number) {
@@ -20,7 +20,7 @@ export class Job {
 
 	set pdu(value: any) {
 		this._pdu = value;
-		this.eventEmitter.emit(JobEvents.STATE_CHANGED, {});
+		this.eventEmitter.emit(Job.STATE_CHANGED, {});
 	}
 
 	private _perSecond?: number;
@@ -31,7 +31,7 @@ export class Job {
 
 	set perSecond(value: number) {
 		this._perSecond = value;
-		this.eventEmitter.emit(JobEvents.STATE_CHANGED, {});
+		this.eventEmitter.emit(Job.STATE_CHANGED, {});
 	}
 
 	private _count?: number;
@@ -42,7 +42,7 @@ export class Job {
 
 	set count(value: number) {
 		this._count = value;
-		this.eventEmitter.emit(JobEvents.STATE_CHANGED, {});
+		this.eventEmitter.emit(Job.STATE_CHANGED, {});
 	}
 
 	static deserialize(serialized: any): Job {

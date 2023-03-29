@@ -58,7 +58,7 @@ export abstract class SessionManager {
 	}
 
 	serialize(): object {
-		this.logger.log1(`Serializing ${this.sessions.length} clients`)
+		this.logger.log1(`Serializing ${this.sessions.length} clients`);
 		return this.sessions.map((session: SmppSession) => {
 			return session.serialize();
 		});

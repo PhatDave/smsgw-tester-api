@@ -21,14 +21,13 @@ export class Center extends SmppSession {
 	port: number;
 
 	pduProcessors: PduProcessor[] = [];
-	defaultSingleJob: Job = Job.createEmptySingle();
-	defaultMultipleJob: Job = Job.createEmptyMultiple();
-
+	defaultSingleJob!: Job;
+	defaultMultipleJob!: Job;
+	readonly logger: Logger;
 	private pendingSessions: any[] = [];
 	private sessions: any[] = [];
 	private nextSession: number = 0;
 	private server: any;
-	readonly logger: Logger;
 
 	constructor(id: number, port: number, username: string, password: string) {
 		super();
@@ -36,6 +35,9 @@ export class Center extends SmppSession {
 		this.username = username;
 		this.password = password;
 		this.port = port;
+
+		this.setDefaultSingleJob(Job.createEmptySingle());
+		this.setDefaultMultipleJob(Job.createEmptyMultiple());
 
 		this.logger = new Logger(`Center-${id}`);
 
@@ -111,6 +113,10 @@ export class Center extends SmppSession {
 			defaultSingleJob: this.defaultSingleJob,
 			defaultMultipleJob: this.defaultMultipleJob,
 		};
+	}
+
+	getPort(): number {
+		return this.port;
 	}
 
 	private validateSessions(reject: (reason?: any) => void) {

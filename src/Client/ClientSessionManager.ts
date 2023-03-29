@@ -1,4 +1,3 @@
-import EventEmitter from "events";
 import Logger from "../Logger";
 import {SessionManager} from "../SessionManager";
 import {SmppSession} from "../SmppSession";

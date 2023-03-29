@@ -61,8 +61,6 @@ export abstract class SmppSession {
 
 	abstract close(): Promise<void>;
 
-	abstract initialize(): void;
-
 	abstract serialize(): object;
 
 	on(event: string, callback: (...args: any[]) => void): void {
@@ -168,7 +166,7 @@ export abstract class SmppSession {
 			});
 		});
 		if (successful === 0) {
-			return Promise.reject("No PDU processor was able to process the PDU");
+			return Promise.resolve("No PDU processor was able to process the PDU");
 		} else {
 			return Promise.resolve();
 		}
