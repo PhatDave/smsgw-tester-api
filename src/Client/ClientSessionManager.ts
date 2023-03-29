@@ -1,4 +1,5 @@
 import EventEmitter from "events";
+import {Center} from "../Center/Center";
 import Logger from "../Logger";
 import {SessionManager} from "../SessionManager";
 import {SmppSession} from "../SmppSession";
@@ -7,6 +8,8 @@ import {Client} from "./Client";
 const CLIENT_SESSIONS_FILE: string = process.env.CLIENT_SESSIONS_FILE || "client_sessions.json";
 
 export default class ClientSessionManager extends SessionManager {
+    comparatorFn: (arg: any, session: SmppSession) => boolean = (arg: any, session: SmppSession) => (session as Client).getUrl() === arg;
+	StorageFile: string = CLIENT_SESSIONS_FILE;
 	ManagedSessionClass: any = Client;
 	sessionId: number = 0;
 	sessions: Client[] = [];
@@ -18,29 +21,6 @@ export default class ClientSessionManager extends SessionManager {
 	constructor() {
 		super();
 		// super.eventEmitter.on(super.SESSION_ADDED_EVENT, (session: SmppSession) => this.eventEmitter.emit(this.SESSION_ADDED_EVENT, session));
-	}
-
-	// TODO: Move this to superclass too
-	getExisting(arg: any): Promise<SmppSession> {
-		return new Promise<SmppSession>((resolve, reject) => {
-			this.logger.log1(`Looking for session with url ${arg}...`);
-			let session: SmppSession | undefined = this.sessions.find((s: Client) => s.getUrl() === arg);
-			if (session) {
-				this.logger.log1(`Found session with url ${arg}`);
-				resolve(session);
-			} else {
-				this.logger.log1(`Session with url ${arg} not found`);
-				reject(`Session with url ${arg} not found`);
-			}
-		});
-	}
-
-	cleanup(): void {
-		throw new Error("Method not implemented.");
-	}
-
-	setup(): void {
-		throw new Error("Method not implemented.");
 	}
 
 	// setup(): void {

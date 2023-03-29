@@ -9,6 +9,8 @@ import {Center} from "./Center";
 const CENTER_SESSIONS_FILE: string = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 
 export class CenterSessionManager extends SessionManager {
+    comparatorFn: (arg: any, session: SmppSession) => boolean = (arg: any, session: SmppSession) => (session as Center).getPort() === arg;
+    StorageFile: string = CENTER_SESSIONS_FILE
 	ManagedSessionClass: any = Center;
 	sessionId: number = 0;
 	sessions: Center[] = [];
@@ -19,29 +21,6 @@ export class CenterSessionManager extends SessionManager {
 	constructor() {
 		super();
 		// super.eventEmitter.on(super.SESSION_ADDED_EVENT, (session: SmppSession) => this.eventEmitter.emit(this.SESSION_ADDED_EVENT, session));
-	}
-
-	setup(): void {
-		try {
-			this.logger.log1(`Loading clients from ${CENTER_SESSIONS_FILE}`)
-			let sessions: Buffer = fs.readFileSync(CENTER_SESSIONS_FILE);
-			let loadedSessions: any[] = JSON.parse(String(sessions));
-			this.logger.log1(`Loaded ${loadedSessions.length} clients from ${CENTER_SESSIONS_FILE}`);
-			loadedSessions.forEach(session => {
-				this.createSession(session.url, session.username, session.password).then((sessionObj: SmppSession) => {
-					sessionObj.setDefaultSingleJob(Job.deserialize(session.defaultSingleJob));
-					sessionObj.setDefaultMultipleJob(Job.deserialize(session.defaultMultipleJob));
-				});
-			});
-		} catch (e) {
-			this.logger.log1(`Error loading clients from ${CENTER_SESSIONS_FILE}: ${e}`);
-			return;
-		}
-	}
-
-	cleanup(): void {
-		this.logger.log1(`Saving clients to ${CENTER_SESSIONS_FILE}...`);
-		fs.writeFileSync(CENTER_SESSIONS_FILE, JSON.stringify(this.serialize(), null, 4));
 	}
 
 	createSession(port: number, username: string, password: string): Promise<SmppSession> {
