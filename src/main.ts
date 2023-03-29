@@ -2,27 +2,15 @@ import {Center} from "./Center/Center";
 import {CenterSessionManager} from "./Center/CenterSessionManager";
 import {Client} from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
+import {HttpServer} from "./HttpServer/HttpServer";
 import {Job} from "./Job/Job";
 import Logger from "./Logger";
 import {DebugPduProcessor} from "./PDUProcessor/DebugPduProcessor";
 import {EchoPduProcessor} from "./PDUProcessor/EchoPduProcessor";
 import {PduProcessor} from "./PDUProcessor/PduProcessor";
+import {WSServer} from "./WS/WSServer";
 
-const smpp = require("smpp");
-const fs = require("fs");
-const path = require("path");
-const EventEmitter = require("events");
-const NanoTimer = require('nanotimer');
-
-const express = require("express");
-const bodyParser = require("body-parser");
-const WebSocket = require("ws");
 const {PDU} = require("smpp");
-
-const app = express();
-
-const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
-
 // TODO: Add support for encodings
 // TODO: Implement some sort of metrics on frontend by counting the pdus
 
@@ -34,64 +22,8 @@ PduProcessor.addProcessor(EchoPduProcessor);
 let clientManager: ClientSessionManager = new ClientSessionManager();
 let centerManager: CenterSessionManager = new CenterSessionManager();
 
-// let wss: WSServer = new WSServer([clientManager]);
-
-async function main() {
-	let client: Client = await clientManager.createSession("smpp://localhost:7000", "test", "test") as Client;
-	let center: Center = await centerManager.createSession(7000, "test", "test") as Center;
-
-	let debugJobSingle = new Job(new PDU("submit_sm", {
-		source_addr: "1234567890",
-		destination_addr: "1234567890",
-		short_message: "Hello World"
-	}));
-	let debugJobMulti = new Job(new PDU("submit_sm", {
-		source_addr: "1234567890",
-		destination_addr: "1234567890",
-		short_message: "Hello World"
-	}), 10, 50);
-
-	client.setDefaultSingleJob(debugJobSingle);
-	client.setDefaultMultipleJob(debugJobMulti);
-
-	// 	// client.sendMultipleDefault();
-	//
-	// 	// client.on(ClientEvents.ANY_PDU, (pdu: any) => console.log(pdu));
-	// 	client.on(ClientEvents.STATUS_CHANGED, (state: any) => console.log(state));
-	// 	client.setDefaultSingleJob(new Job(pdu1));
-	// 	client.setDefaultMultipleJob(new Job(pdu1, 100, 10));
-	// 	client.sendSingleDefault();
-	// 	client.close().then(() => {
-	// 		console.log("CLOSED");
-	// 		client.doConnect().then(() => {
-	// 			client.doBind().then(() => {
-	// 				client.sendMultipleDefault();
-	// 			}, reason => console.log(reason));
-	// 		}, err => console.log(err));
-	// 	}, err => console.log(err));
-	// });
-
-	// setInterval(() => {
-	// 	client.connectAndBind().then(() => {
-	// 		console.log("POGGIES");
-	// 		client.close();
-	// 	});
-	// }, 1000);
-	// setTimeout(() => {
-	// 	center.sendMultiple(new Job(new PDU("deliver_sm", {
-	// 		source_addr: "1234567890",
-	// 		destination_addr: "1234567890",
-	// 		short_message: "Hello World"
-	// 	}), 10, 100));
-	// 	// center.close();
-	// }, 5000);
-
-	// client.connectAndBind().then(() => {
-	// 	client.sendMultipleDefault();
-	// });
-}
-
-main();
+let wss: WSServer = new WSServer([clientManager, centerManager]);
+let httpServer: HttpServer = new HttpServer(clientManager, centerManager);
 
 function cleanup(): void {
 	logger.log1("Cleaning up...");

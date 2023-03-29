@@ -1,0 +1,66 @@
+import Logger from "../Logger";
+import {SessionManager} from "../SessionManager";
+import {CenterRequestHandler} from "./CenterRequestHandler";
+import ClientRequestHandler from "./ClientRequestHandler";
+import {RequestHandler} from "./RequestHandler";
+
+const express = require("express");
+const bodyParser = require("body-parser");
+
+const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
+
+export class HttpServer {
+	private clientRequestHandler: RequestHandler;
+	private centerRequestHandler: RequestHandler;
+
+	private app: any;
+	private server: any;
+	private readonly logger: Logger = new Logger(this.constructor.name);
+
+	constructor(clientManager: SessionManager, centerManager: SessionManager) {
+		this.clientRequestHandler = new ClientRequestHandler(clientManager);
+		this.centerRequestHandler = new CenterRequestHandler(centerManager);
+
+		this.app = express();
+		this.app.use(bodyParser.json());
+
+		this.app.get('/api/client', this.clientRequestHandler.doGet.bind(this.clientRequestHandler));
+		this.app.post('/api/client', this.clientRequestHandler.doPost.bind(this.clientRequestHandler));
+		this.app.get('/api/client/:id', this.clientRequestHandler.doGetById.bind(this.clientRequestHandler));
+		this.app.patch('/api/client/:id', this.clientRequestHandler.doPatch.bind(this.clientRequestHandler));
+		this.app.put('/api/client/:id/send', this.clientRequestHandler.doConfigureSingleJob.bind(this.clientRequestHandler));
+		this.app.post('/api/client/:id/send/default', this.clientRequestHandler.doSendSingleJob.bind(this.clientRequestHandler));
+		this.app.post('/api/client/:id/send', this.clientRequestHandler.doSend.bind(this.clientRequestHandler));
+		this.app.put('/api/client/:id/sendMany', this.clientRequestHandler.doConfigureManyJob.bind(this.clientRequestHandler));
+		this.app.post('/api/client/:id/sendMany/default', this.clientRequestHandler.doSendManyJob.bind(this.clientRequestHandler));
+		this.app.post('/api/client/:id/sendMany', this.clientRequestHandler.doSendMany.bind(this.clientRequestHandler));
+		this.app.delete('/api/client/:id/sendMany', this.clientRequestHandler.doCancelSendMany.bind(this.clientRequestHandler));
+		this.app.post('/api/client/:id/bind', this.clientRequestHandler.doBind.bind(this.clientRequestHandler));
+		this.app.post('/api/client/:id/connect', this.clientRequestHandler.doConnect.bind(this.clientRequestHandler));
+		this.app.delete('/api/client/:id/connect', this.clientRequestHandler.doDisconnect.bind(this.clientRequestHandler));
+		this.app.delete('/api/client/:id', this.clientRequestHandler.doDelete.bind(this.clientRequestHandler));
+
+		this.app.get('/api/center', this.centerRequestHandler.doGet.bind(this.centerRequestHandler));
+		this.app.post('/api/center', this.centerRequestHandler.doPost.bind(this.centerRequestHandler));
+		this.app.get('/api/center/:id', this.centerRequestHandler.doGetById.bind(this.centerRequestHandler));
+		this.app.patch('/api/center/:id', this.centerRequestHandler.doPatch.bind(this.centerRequestHandler));
+		this.app.put('/api/center/:id/send', this.centerRequestHandler.doConfigureSingleJob.bind(this.centerRequestHandler));
+		this.app.post('/api/center/:id/send/default', this.centerRequestHandler.doSendSingleJob.bind(this.centerRequestHandler));
+		this.app.post('/api/center/:id/send', this.centerRequestHandler.doSend.bind(this.centerRequestHandler));
+		this.app.put('/api/center/:id/sendMany', this.centerRequestHandler.doConfigureManyJob.bind(this.centerRequestHandler));
+		this.app.post('/api/center/:id/sendMany/default', this.centerRequestHandler.doSendManyJob.bind(this.centerRequestHandler));
+		this.app.post('/api/center/:id/sendMany', this.centerRequestHandler.doSendMany.bind(this.centerRequestHandler));
+		this.app.delete('/api/center/:id/sendMany', this.centerRequestHandler.doCancelSendMany.bind(this.centerRequestHandler));
+		this.app.delete('/api/center/:id/connect', this.centerRequestHandler.doDisconnect.bind(this.centerRequestHandler));
+		this.app.delete('/api/center/:id', this.centerRequestHandler.doDelete.bind(this.centerRequestHandler));
+		this.app.get('/api/center/processors', this.centerRequestHandler.doGetAppliedProcessors.bind(this.centerRequestHandler));
+		this.app.get('/api/center/processors/all', this.centerRequestHandler.doGetAvailableProcessors.bind(this.centerRequestHandler));
+		this.app.post('/api/center/processors', this.centerRequestHandler.doAddProcessor.bind(this.centerRequestHandler));
+		this.app.delete('/api/center/processors', this.centerRequestHandler.doRemoveProcessor.bind(this.centerRequestHandler));
+
+		this.server = this.app.listen(SERVER_PORT, function () {
+			// @ts-ignore
+			this.logger.log1(`HTTPServer listening at http://localhost:${SERVER_PORT}`)
+		}.bind(this));
+	}
+}

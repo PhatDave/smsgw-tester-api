@@ -42,7 +42,7 @@ export abstract class PduProcessor {
 		PduProcessor.processors.push(new processor());
 	}
 
-	static getProcessorsForType(type: string): any[] {
+	static getProcessorsForType(type: string): PduProcessor[] {
 		return this.processors.filter((processor: any) => processor.servesSessionType === type);
 	}
 
