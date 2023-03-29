@@ -1,5 +1,4 @@
 import EventEmitter from "events";
-import * as repl from "repl";
 import {Job} from "../Job/Job";
 import {JobEvents} from "../Job/JobEvents";
 import Logger from "../Logger";

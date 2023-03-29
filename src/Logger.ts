@@ -9,6 +9,12 @@ const LOG_LEVEL: number = process.env.LOG_LEVEL || 6;
 const LOG_FILE: string = process.env.LOG_FILE || "";
 
 export default class Logger {
+	log1 = this.log.bind(this, 1);
+	log2 = this.log.bind(this, 2);
+	log3 = this.log.bind(this, 3);
+	log4 = this.log.bind(this, 4);
+	log5 = this.log.bind(this, 5);
+	log6 = this.log.bind(this, 6);
 	private clazz: string;
 	private readonly logLevel: number;
 	private readonly logFile: string;
@@ -62,11 +68,4 @@ export default class Logger {
 			this.logFileWriteStream.write(out + "\n");
 		}
 	}
-
-	log1 = this.log.bind(this, 1);
-	log2 = this.log.bind(this, 2);
-	log3 = this.log.bind(this, 3);
-	log4 = this.log.bind(this, 4);
-	log5 = this.log.bind(this, 5);
-	log6 = this.log.bind(this, 6);
 }

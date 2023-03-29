@@ -1,6 +1,4 @@
 import EventEmitter from "events";
-import fs from "fs";
-import {Job} from "../Job/Job";
 import Logger from "../Logger";
 import {SessionManager} from "../SessionManager";
 import {SmppSession} from "../SmppSession";
@@ -9,8 +7,7 @@ import {Center} from "./Center";
 const CENTER_SESSIONS_FILE: string = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 
 export class CenterSessionManager extends SessionManager {
-    comparatorFn: (arg: any, session: SmppSession) => boolean = (arg: any, session: SmppSession) => (session as Center).getPort() === arg;
-    StorageFile: string = CENTER_SESSIONS_FILE
+	StorageFile: string = CENTER_SESSIONS_FILE
 	ManagedSessionClass: any = Center;
 	sessionId: number = 0;
 	sessions: Center[] = [];
@@ -22,6 +19,8 @@ export class CenterSessionManager extends SessionManager {
 		super();
 		// super.eventEmitter.on(super.SESSION_ADDED_EVENT, (session: SmppSession) => this.eventEmitter.emit(this.SESSION_ADDED_EVENT, session));
 	}
+
+	comparatorFn: (arg: any, session: SmppSession) => boolean = (arg: any, session: SmppSession) => (session as Center).getPort() === arg;
 
 	createSession(port: number, username: string, password: string): Promise<SmppSession> {
 		return new Promise<SmppSession>((resolve, reject) => {

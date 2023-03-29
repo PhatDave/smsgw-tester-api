@@ -9,6 +9,7 @@ export class DebugProcessor implements CenterPDUProcessor {
 	constructor() {
 		this.logger = new Logger('DebugProcessor');
 	}
+
 	processPdu(session: any, pdu: any): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
 			let promises = [];

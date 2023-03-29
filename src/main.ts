@@ -26,7 +26,7 @@ const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE
 let logger = new Logger("main");
 
 let clientManager: ClientSessionManager = new ClientSessionManager();
-// clientManager.setup();
+clientManager.setup();
 
 // let wss: WSServer = new WSServer([clientManager]);
 

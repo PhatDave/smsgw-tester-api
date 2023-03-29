@@ -1,11 +1,12 @@
 import EventEmitter from "events";
 import fs from "fs";
-import {Client} from "./Client/Client";
 import {Job} from "./Job/Job";
 import Logger from "./Logger";
 import {SmppSession} from "./SmppSession";
 
 export abstract class SessionManager {
+	// I could've done this by passing these abstract properties to the constructor, but I wanted to have the possibility
+	// of implementing additional methods
 	abstract sessions: SmppSession[];
 	abstract sessionId: number;
 	abstract comparatorFn: (arg: any, session: SmppSession) => boolean;
@@ -63,8 +64,6 @@ export abstract class SessionManager {
 		});
 	}
 
-	// TODO: Maybe find a way to include write and read to file here too (instead of child classes)
-
 	createSession(arg: any, username: string, password: string): Promise<SmppSession> {
 		return new Promise<SmppSession>((resolve, reject) => {
 			this.logger.log1(`Creating session of type ${this.ManagedSessionClass.name} with arg ${arg}`);
@@ -113,17 +112,17 @@ export abstract class SessionManager {
 		this.logger.log1(`Saving centers to ${this.StorageFile}...`);
 		fs.writeFileSync(this.StorageFile, JSON.stringify(this.serialize(), null, 4));
 	}
+
 	getExisting(arg: any): Promise<SmppSession> {
 		return new Promise<SmppSession>((resolve, reject) => {
-			this.logger.log1(`Looking for session with url ${arg}...`);
-			// let session: SmppSession | undefined = this.sessions.find((s: Client) => s.getUrl() === arg);
+			this.logger.log1(`Looking for session with arg ${arg}...`);
 			let session: SmppSession | undefined = this.sessions.find(this.comparatorFn.bind(this, arg));
 			if (session) {
-				this.logger.log1(`Found session with url ${arg}`);
+				this.logger.log1(`Found session with arg ${arg}`);
 				resolve(session);
 			} else {
-				this.logger.log1(`Session with url ${arg} not found`);
-				reject(`Session with url ${arg} not found`);
+				this.logger.log1(`Session with arg ${arg} not found`);
+				reject(`Session with arg ${arg} not found`);
 			}
 		});
 	}
