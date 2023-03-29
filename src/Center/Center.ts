@@ -111,8 +111,8 @@ export class Center extends SmppSession {
 			username: this.username,
 			password: this.password,
 			status: this.status,
-			defaultSingleJob: this.defaultSingleJob,
-			defaultMultipleJob: this.defaultMultipleJob,
+			defaultSingleJob: this.defaultSingleJob.serialize(),
+			defaultMultipleJob: this.defaultMultipleJob.serialize(),
 			processors: this.pduProcessors.map(p => p.serialize()),
 		};
 	}

@@ -46,11 +46,11 @@ export class Job {
 	}
 
 	static deserialize(serialized: any): Job {
-		if (!serialized._pdu) {
+		if (!serialized.pdu || !serialized.pdu.command) {
 			return Job.createEmptyMultiple();
 		}
-		let pdu: any = new smpp.PDU(serialized._pdu.command, serialized._pdu);
-		return new Job(pdu, serialized._perSecond, serialized._count);
+		let pdu: any = new smpp.PDU(serialized.pdu.command, serialized.pdu);
+		return new Job(pdu, serialized.perSecond, serialized.count);
 	}
 
 	static createEmptySingle(): Job {
@@ -63,7 +63,7 @@ export class Job {
 
 	serialize(): object {
 		return {
-			pdu: JSON.stringify(this.pdu),
+			pdu: this.pdu,
 			perSecond: this.perSecond,
 			count: this.count
 		};

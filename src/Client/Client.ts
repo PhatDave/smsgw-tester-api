@@ -43,8 +43,8 @@ export class Client extends SmppSession {
 		this.password = password;
 		this.url = url;
 
-		this.setDefaultSingleJob(Job.createEmptySingle());
-		this.setDefaultMultipleJob(Job.createEmptyMultiple());
+		this.defaultSingleJob = Job.createEmptySingle();
+		this.defaultMultipleJob = Job.createEmptyMultiple();
 
 		this.logger = new Logger(`Client-${id}`);
 	}
@@ -96,8 +96,8 @@ export class Client extends SmppSession {
 			username: this.username,
 			password: this.password,
 			status: this.status,
-			defaultSingleJob: this.defaultSingleJob,
-			defaultMultipleJob: this.defaultMultipleJob,
+			defaultSingleJob: this.defaultSingleJob.serialize(),
+			defaultMultipleJob: this.defaultMultipleJob.serialize(),
 			processors: this.pduProcessors.map(p => p.serialize()),
 		};
 	}

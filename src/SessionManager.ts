@@ -57,13 +57,6 @@ export abstract class SessionManager {
 		});
 	}
 
-	serialize(): object {
-		this.logger.log1(`Serializing ${this.sessions.length} clients`);
-		return this.sessions.map((session: SmppSession) => {
-			return session.serialize();
-		});
-	}
-
 	createSession(arg: any, username: string, password: string): Promise<SmppSession> {
 		return new Promise<SmppSession>((resolve, reject) => {
 			this.logger.log1(`Creating session of type ${this.ManagedSessionClass.name} with arg ${arg}`);
@@ -111,6 +104,13 @@ export abstract class SessionManager {
 	cleanup(): void {
 		this.logger.log1(`Saving centers to ${this.StorageFile}...`);
 		fs.writeFileSync(this.StorageFile, JSON.stringify(this.serialize(), null, 4));
+	}
+
+	serialize(): object {
+		this.logger.log1(`Serializing ${this.sessions.length} clients`);
+		return this.sessions.map((session: SmppSession) => {
+			return session.serialize();
+		});
 	}
 
 	getExisting(arg: any): Promise<SmppSession> {
