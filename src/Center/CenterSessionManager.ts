@@ -9,6 +9,7 @@ import {Center} from "./Center";
 const CENTER_SESSIONS_FILE: string = process.env.CENTER_SESSIONS_FILE || "center_sessions.json";
 
 export class CenterSessionManager extends SessionManager {
+	ManagedSessionClass: any = Center;
 	sessionId: number = 0;
 	sessions: Center[] = [];
 	identifier: string = "center";
@@ -46,13 +47,13 @@ export class CenterSessionManager extends SessionManager {
 	createSession(port: number, username: string, password: string): Promise<SmppSession> {
 		return new Promise<SmppSession>((resolve, reject) => {
 			this.logger.log1(`Creating session with port ${port}`);
-			this.getSessionByPort(port).then(s => {
+			this.getExisting(port).then(s => {
 				resolve(s);
 			}, err => {
 			});
 			this.verifyPort(port, reject);
-			this.verifyUsername(username, reject);
-			this.verifyPassword(password, reject);
+			// this.verifyUsername(username, reject);
+			// this.verifyPassword(password, reject);
 
 			let client = new Center(this.sessionId++, port, username, password);
 			this.addSession(client).then(() => {
@@ -61,16 +62,16 @@ export class CenterSessionManager extends SessionManager {
 		});
 	}
 
-	getSessionByPort(port: number): Promise<SmppSession> {
+	getExisting(arg: any): Promise<SmppSession> {
 		return new Promise<SmppSession>((resolve, reject) => {
-			this.logger.log1(`Looking for session with port ${port}...`);
-			let session: SmppSession | undefined = this.sessions.find((s: Center) => s.getPort() === port);
+			this.logger.log1(`Looking for session with port ${arg}...`);
+			let session: SmppSession | undefined = this.sessions.find((s: Center) => s.getPort() === arg);
 			if (session) {
-				this.logger.log1(`Found session with port ${port}`);
+				this.logger.log1(`Found session with port ${arg}`);
 				resolve(session);
 			} else {
-				this.logger.log1(`Session with port ${port} not found`);
-				reject(`Session with port ${port} not found`);
+				this.logger.log1(`Session with port ${arg} not found`);
+				reject(`Session with port ${arg} not found`);
 			}
 		});
 	}

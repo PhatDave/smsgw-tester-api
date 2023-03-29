@@ -26,13 +26,13 @@ const MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE
 let logger = new Logger("main");
 
 let clientManager: ClientSessionManager = new ClientSessionManager();
-clientManager.setup();
+// clientManager.setup();
 
 // let wss: WSServer = new WSServer([clientManager]);
 
 async function main() {
-	// let client: Client = await clientManager.createSession("smpp://localhost:7000", "test", "test") as Client;
-	let client: Client = await clientManager.getSession(0) as Client;
+	let client: Client = await clientManager.createSession("smpp://localhost:7000", "test", "test") as Client;
+	// let client: Client = await clientManager.getSession(0) as Client;
 
 	// 	// client.sendMultipleDefault();
 	//

@@ -5,7 +5,9 @@ import {SmppSession} from "./SmppSession";
 export abstract class SessionManager {
 	abstract sessions: SmppSession[];
 	abstract sessionId: number;
-	abstract identifier: string;
+	readonly abstract identifier: string;
+	readonly abstract ManagedSessionClass: any;
+
 	readonly SESSION_ADDED_EVENT: string = "SESSION ADDED";
 	readonly logger: Logger = new Logger("SessionManager");
 	readonly eventEmitter: EventEmitter = new EventEmitter();
@@ -20,12 +22,12 @@ export abstract class SessionManager {
 	}
 
 	on(event: string, listener: (...args: any[]) => void): void {
-        this.eventEmitter.on(event, listener);
-    }
+		this.eventEmitter.on(event, listener);
+	}
 
 	getSessions(): Promise<SmppSession[]> {
 		return Promise.resolve(this.sessions);
-    }
+	}
 
 	removeSession(session: SmppSession): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
@@ -58,17 +60,27 @@ export abstract class SessionManager {
 
 	// TODO: Maybe find a way to include write and read to file here too (instead of child classes)
 
-	verifyUsername(username: string, reject: (reason?: any) => void) {
-		if (!username) {
-			let error = `Request to make a new client failed because of missing username.`;
-			this.logger.log1(error);
-			reject(error);
-		}
+	createSession(arg: any, username: string, password: string): Promise<SmppSession> {
+		return new Promise<SmppSession>((resolve, reject) => {
+			this.logger.log1(`Creating session of type ${this.ManagedSessionClass.name} with arg ${arg}`);
+			this.getExisting(arg).then((s: SmppSession) => {
+				resolve(s);
+			}, err => {
+			});
+			this.verifyField(arg, reject);
+			this.verifyField(username, reject);
+			this.verifyField(password, reject);
+
+			let session = new this.ManagedSessionClass(this.sessionId++, arg, username, password);
+			this.addSession(session).then(() => {
+				resolve(session);
+			});
+		});
 	}
 
-	verifyPassword(password: string, reject: (reason?: any) => void) {
-		if (!password) {
-			let error = `Request to make a new client failed because of missing password.`;
+	verifyField(field: string, reject: (reason?: any) => void) {
+		if (!field) {
+			let error = `Request to make a new client failed because of missing ${field}.`;
 			this.logger.log1(error);
 			reject(error);
 		}
@@ -77,4 +89,6 @@ export abstract class SessionManager {
 	abstract cleanup(): void;
 
 	abstract setup(): void;
+
+	abstract getExisting(arg: any): Promise<SmppSession>;
 }
