@@ -46,18 +46,6 @@ export class Job {
 		this.eventEmitter.emit(Job.STATE_CHANGED, {});
 	}
 
-	static deserialize(serialized: SerializedJob): Job {
-		if (!serialized.pdu || !serialized.pdu.command) {
-			if (!serialized.perSecond && !serialized.count) {
-				return Job.createEmptySingle();
-			} else {
-				return Job.createEmptyMultiple();
-			}
-		}
-		let pdu: PDU = new smpp.PDU(serialized.pdu.command, serialized.pdu);
-		return new Job(pdu, serialized.perSecond, serialized.count);
-	}
-
 	static createEmptySingle(): Job {
 		return new Job({});
 	}
@@ -82,6 +70,18 @@ export class Job {
 		if (!!this._count && !!req.body.count && req.body.count != this._count) {
 			this._count = req.body.count;
 		}
+	}
+
+	static deserialize(serialized: SerializedJob): Job {
+		if (!serialized.pdu || !serialized.pdu.command) {
+			if (!serialized.perSecond && !serialized.count) {
+				return Job.createEmptySingle();
+			} else {
+				return Job.createEmptyMultiple();
+			}
+		}
+		let pdu: PDU = new smpp.PDU(serialized.pdu.command, serialized.pdu);
+		return new Job(pdu, serialized.perSecond, serialized.count);
 	}
 
 	serialize(): SerializedJob {

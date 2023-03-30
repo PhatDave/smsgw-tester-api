@@ -83,8 +83,8 @@ export abstract class SessionManager {
 			}, err => {
 			});
 			this.verifyField(arg, reject);
-			this.verifyField(username, reject);
-			this.verifyField(password, reject);
+			username = username || "";
+			password = password || "";
 
 			let session = new this.ManagedSessionClass(this.sessionId++, arg, username, password);
 			this.addSession(session).then(() => {

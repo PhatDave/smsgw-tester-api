@@ -20,7 +20,7 @@ export class WSServer {
 		this.sessionManagers = sessionManagers;
 		this.logger = new Logger("WSServer");
 		this.server.on('connection', this.eventOnConnection.bind(this));
-		this.logger.log1(`WSServer listening atws://localhost:${WS_SERVER_PORT}`);
+		this.logger.log1(`WSServer listening at ws://localhost:${WS_SERVER_PORT}`);
 	}
 
 	private eventOnConnection(ws: WebSocket): void {

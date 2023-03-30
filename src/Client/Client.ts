@@ -19,15 +19,11 @@ export class Client extends SmppSession {
 		"BOUND",
 		"BUSY",
 	]
-
 	url: string;
 	_username: string;
 	_password: string;
 	_id: number;
 	_status: string = this.STATUS[0];
-	_defaultSingleJob: Job;
-	_defaultMultipleJob: Job;
-
 	pduProcessors: PduProcessor[] = [];
 	readonly logger: Logger;
 	private session?: any;
@@ -46,6 +42,32 @@ export class Client extends SmppSession {
 		this._defaultMultipleJob = Job.createEmptyMultiple();
 
 		this.logger = new Logger(`Client-${id}`);
+	}
+
+	_defaultSingleJob: Job;
+
+	get defaultSingleJob(): Job {
+		return this._defaultSingleJob;
+	}
+
+	set defaultSingleJob(job: Job) {
+		if (job.pdu && !job.pdu.command) {
+			job.pdu.command = 'submit_sm';
+		}
+		super.defaultSingleJob = job;
+	}
+
+	_defaultMultipleJob: Job;
+
+	get defaultMultipleJob(): Job {
+		return this._defaultMultipleJob;
+	}
+
+	set defaultMultipleJob(job: Job) {
+		if (job.pdu && !job.pdu.command) {
+			job.pdu.command = 'submit_sm';
+		}
+		super.defaultMultipleJob = job;
 	}
 
 	doConnect(): PersistentPromise {
@@ -90,13 +112,13 @@ export class Client extends SmppSession {
 
 	serialize(): object {
 		return {
-			id: this.id,
+			id: this._id,
 			url: this.url,
-			username: this.username,
-			password: this.password,
-			status: this.status,
-			defaultSingleJob: this.defaultSingleJob.serialize(),
-			defaultMultipleJob: this.defaultMultipleJob.serialize(),
+			username: this._username,
+			password: this._password,
+			status: this._status,
+			defaultSingleJob: this._defaultSingleJob.serialize(),
+			defaultMultipleJob: this._defaultMultipleJob.serialize(),
 			processors: this.pduProcessors.map(p => p.serialize()),
 		};
 	}
