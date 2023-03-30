@@ -1,4 +1,5 @@
 import EventEmitter from "events";
+import {PDU, SerializedJob} from "../CommonObjects";
 
 const smpp = require("smpp");
 
@@ -6,19 +7,19 @@ export class Job {
 	static readonly STATE_CHANGED: string = "STATE_CHANGED";
 	private eventEmitter: EventEmitter = new EventEmitter();
 
-	constructor(pdu: any, perSecond?: number, count?: number) {
+	constructor(pdu: PDU, perSecond?: number, count?: number) {
 		this._pdu = pdu;
 		this._perSecond = perSecond;
 		this._count = count;
 	}
 
-	private _pdu: any;
+	private _pdu: PDU;
 
-	get pdu(): any {
+	get pdu(): PDU {
 		return this._pdu;
 	}
 
-	set pdu(value: any) {
+	set pdu(value: PDU) {
 		this._pdu = value;
 		this.eventEmitter.emit(Job.STATE_CHANGED, {});
 	}
@@ -45,7 +46,7 @@ export class Job {
 		this.eventEmitter.emit(Job.STATE_CHANGED, {});
 	}
 
-	static deserialize(serialized: any): Job {
+	static deserialize(serialized: SerializedJob): Job {
 		if (!serialized.pdu || !serialized.pdu.command) {
 			if (!serialized.perSecond && !serialized.count) {
 				return Job.createEmptySingle();
@@ -53,7 +54,7 @@ export class Job {
 				return Job.createEmptyMultiple();
 			}
 		}
-		let pdu: any = new smpp.PDU(serialized.pdu.command, serialized.pdu);
+		let pdu: PDU = new smpp.PDU(serialized.pdu.command, serialized.pdu);
 		return new Job(pdu, serialized.perSecond, serialized.count);
 	}
 
@@ -83,7 +84,7 @@ export class Job {
 		}
 	}
 
-	serialize(): object {
+	serialize(): SerializedJob {
 		return {
 			pdu: this.pdu,
 			perSecond: this.perSecond,

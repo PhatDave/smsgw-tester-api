@@ -1,3 +1,4 @@
+import {PDU} from "../CommonObjects";
 import {Job} from "../Job/Job";
 import Logger from "../Logger";
 import {DebugPduProcessor} from "../PDUProcessor/DebugPduProcessor";
@@ -136,21 +137,25 @@ export class Center extends SmppSession {
 		return session;
 	}
 
-	private eventBindTransceiver(session: any, pdu: any) {
+	private eventBindTransceiver(session: any, pdu: PDU) {
 		this.logger.log1(`Center-${this.getId()} got a bind_transciever with system_id ${pdu.system_id} and password ${pdu.password}`);
 		session.pause();
 		if (pdu.system_id === this.username && pdu.password === this.password) {
 			this.logger.log1(`Center-${this.getId()} client connection successful`);
-			session.send(pdu.response());
+			if (pdu.response) {
+				session.send(pdu.response());
+			}
 			session.resume();
 			this.pendingSessions = this.pendingSessions.filter((s) => s !== session);
 			this.sessions.push(session);
 			this.updateStatus();
 		} else {
 			this.logger.log1(`Center-${this.getId()} client connection failed, invalid credentials (expected: ${this.username}, ${this.password})`);
-			session.send(pdu.response({
-				command_status: smpp.ESME_RBINDFAIL
-			}));
+			if (pdu.response) {
+				session.send(pdu.response({
+					command_status: smpp.ESME_RBINDFAIL
+				}));
+			}
 			this.pendingSessions = this.pendingSessions.filter((s) => s !== session);
 			this.updateStatus();
 			session.close();

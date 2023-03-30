@@ -1,3 +1,4 @@
+import {PDU} from "../CommonObjects";
 import {Job} from "../Job/Job";
 import Logger from "../Logger";
 import {PduProcessor} from "../PDUProcessor/PduProcessor";
@@ -180,7 +181,7 @@ export class Client extends SmppSession {
 		}
 	}
 
-	private eventSessionError(pdu: any): void {
+	private eventSessionError(pdu: PDU): void {
 		this.logger.log1(`Client-${this.getId()} error on ${this.url}`);
 		this.setStatus(0);
 		this.rejectPromises();
@@ -192,7 +193,7 @@ export class Client extends SmppSession {
 		this.rejectPromises();
 	}
 
-	private eventBindReply(pdu: any): void {
+	private eventBindReply(pdu: PDU): void {
 		if (pdu.command_status === 0) {
 			this.logger.log1(`Client-${this.getId()} bound to ${this.url}`);
 			this.setStatus(4);

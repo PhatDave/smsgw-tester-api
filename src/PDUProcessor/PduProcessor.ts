@@ -1,17 +1,17 @@
+import {PDU} from "../CommonObjects";
 import Logger from "../Logger";
 import {SmppSession} from "../SmppSession";
-import {DebugPduProcessor} from "./DebugPduProcessor";
 
 export abstract class PduProcessor {
 	static processors: PduProcessor[] = [];
-	abstract readonly servesSessionType: string;
+	abstract readonly serverSessionType: string;
 	readonly name: string = this.constructor.name;
 	readonly logger: Logger = new Logger(`PduProcessor: ${this.name}`);
 	private static logger: Logger = new Logger("PduProcessor");
 
 	static getProcessor(name: string): PduProcessor {
 		this.logger.log1(`Looking for processor with name ${name}...`);
-		let pduProcessor = this.processors.find((processor: any) => processor.name === name);
+		let pduProcessor = this.processors.find((processor: PduProcessor) => processor.name === name);
 		if (pduProcessor) {
 			this.logger.log1(`Found processor with name ${name}`);
 			return pduProcessor;
@@ -35,22 +35,22 @@ export abstract class PduProcessor {
 
 	static areCompatible(session: SmppSession, processor: PduProcessor): boolean {
 		this.logger.log1(`Checking compatibility between session ${session.constructor.name}-${session.getId()} and processor ${processor.name}`);
-		return session.constructor.name === processor.servesSessionType;
+		return session.constructor.name === processor.serverSessionType;
 	}
 
-	static addProcessor(processor: any): void {
+	static addProcessor(processor: new () => PduProcessor): void {
 		PduProcessor.processors.push(new processor());
 	}
 
 	static getProcessorsForType(type: string): PduProcessor[] {
-		return this.processors.filter((processor: any) => processor.servesSessionType === type);
+		return this.processors.filter((processor: PduProcessor) => processor.serverSessionType === type);
 	}
 
-	abstract processPdu(session: any, pdu: any, ...args: any[]): Promise<any>;
+	abstract processPdu(session: any, pdu: PDU, ...args: any[]): Promise<any>;
 
 	serialize(): object {
 		return {
-			servesSessionType: this.servesSessionType,
+			servesSessionType: this.serverSessionType,
 			name: this.name
 		};
 	}

@@ -12,7 +12,7 @@
     <option name="extraTypeScriptOptions" value="" />
     <option name="scriptName" value="$PROJECT_DIR$/src/main.ts" />
     <option name="programParameters" value="" />
-    <option name="tsnodePackage" value="C:\Program Files\nodejs\node_modules\ts-node" />
+    <option name="tsnodePackage" value="~\WebstormProjects\smsgwtester\node_modules\ts-node" />
     <method v="2" />
   </configuration>
 </component>

@@ -7,7 +7,7 @@ const CENTER_SESSIONS_FILE: string = process.env.CENTER_SESSIONS_FILE || "center
 
 export class CenterSessionManager extends SessionManager {
 	StorageFile: string = CENTER_SESSIONS_FILE
-	ManagedSessionClass: any = Center;
+	ManagedSessionClass: typeof Center = Center;
 	sessionId: number = 0;
 	sessions: Center[] = [];
 	identifier: string = "center";

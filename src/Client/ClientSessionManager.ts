@@ -7,7 +7,7 @@ const CLIENT_SESSIONS_FILE: string = process.env.CLIENT_SESSIONS_FILE || "client
 
 export default class ClientSessionManager extends SessionManager {
 	StorageFile: string = CLIENT_SESSIONS_FILE;
-	ManagedSessionClass: any = Client;
+	ManagedSessionClass: typeof Client = Client;
 	sessionId: number = 0;
 	sessions: Client[] = [];
 	// Identifier is used in websockets to identify the type of session this manager manages
