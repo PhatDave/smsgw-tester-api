@@ -14,16 +14,7 @@ export abstract class SmppSession {
 		MESSAGE_SEND_COUNTER_UPDATE_EVENT: "MESSAGE_SEND_COUNTER_UPDATE_EVENT",
 	};
 	abstract STATUS: string[];
-
-	abstract id: number;
-	abstract username: string;
-	abstract password: string;
-	abstract status: string;
 	abstract pduProcessors: PduProcessor[];
-
-	abstract defaultSingleJob: Job;
-	abstract defaultMultipleJob: Job;
-
 	readonly UPDATE_WS: string = "UPDATE_WS";
 	readonly eventEmitter: EventEmitter = new EventEmitter();
 	readonly logger: Logger = new Logger(`SmppSession`);
@@ -36,6 +27,66 @@ export abstract class SmppSession {
 		this.eventEmitter.on(this.EVENT.STATUS_CHANGED, () => this.updateWs(this.EVENT.STATUS_CHANGED));
 		this.eventEmitter.on(this.EVENT.ANY_PDU, (pdu: any) => this.updateWs(this.EVENT.ANY_PDU, [pdu]));
 		this.eventEmitter.on(this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT, (count: number) => this.updateWs(this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT, [count]));
+	}
+
+	abstract _username: string;
+
+	set username(username: string) {
+		this._username = username;
+		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+	}
+
+	abstract _password: string;
+
+	set password(password: string) {
+		this._password = password;
+		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+	}
+
+	abstract _id: number;
+
+	get id(): number {
+		return this._id;
+	}
+
+	abstract _status: string;
+
+	get status(): string {
+		return this._status;
+	}
+
+	set status(status: string) {
+		this._status = status;
+		this.eventEmitter.emit(this.EVENT.STATUS_CHANGED, this.status);
+	}
+
+	abstract _defaultSingleJob: Job;
+
+	get defaultSingleJob(): Job {
+		return this._defaultSingleJob;
+	}
+
+	set defaultSingleJob(job: Job) {
+		this._defaultSingleJob = job;
+		job.on(Job.STATE_CHANGED, this.eventJobUpdated);
+		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+	}
+
+	abstract _defaultMultipleJob: Job;
+
+	get defaultMultipleJob(): Job {
+		return this._defaultMultipleJob;
+	}
+
+	set defaultMultipleJob(job: Job) {
+		this._defaultMultipleJob = job;
+		job.on(Job.STATE_CHANGED, this.eventJobUpdated);
+		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+	}
+
+	setStatus(statusIndex: number) {
+		this._status = this.STATUS[statusIndex];
+		this.eventEmitter.emit(this.EVENT.STATUS_CHANGED, this.status);
 	}
 
 	abstract sendPdu(pdu: object, force?: boolean): Promise<object>;
@@ -92,45 +143,6 @@ export abstract class SmppSession {
 		this.eventEmitter.emit(this.UPDATE_WS, message);
 	}
 
-	getDefaultSingleJob(): Job {
-		return this.defaultSingleJob;
-	}
-
-	setDefaultSingleJob(job: Job): void {
-		this.defaultSingleJob = job;
-		job.on(Job.STATE_CHANGED, this.eventJobUpdated);
-		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
-	}
-
-	getDefaultMultipleJob(): Job {
-		return this.defaultMultipleJob;
-	}
-
-	setDefaultMultipleJob(job: Job): void {
-		this.defaultMultipleJob = job;
-		job.on(Job.STATE_CHANGED, this.eventJobUpdated);
-		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
-	}
-
-	getId(): number {
-		return this.id;
-	}
-
-	setStatus(statusIndex: number): void {
-		this.status = this.STATUS[statusIndex];
-		this.eventEmitter.emit(this.EVENT.STATUS_CHANGED, this.status);
-	}
-
-	setUsername(username: string): void {
-		this.username = username;
-		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
-	}
-
-	setPassword(password: string): void {
-		this.password = password;
-		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
-	}
-
 	eventJobUpdated(): void {
 		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
 	}
@@ -138,16 +150,16 @@ export abstract class SmppSession {
 	addPduProcessor(pduProcessor: PduProcessor): void {
 		if (this.pduProcessors.indexOf(pduProcessor) === -1) {
 			this.pduProcessors.push(pduProcessor);
-			this.logger.log1(`Adding PDU processor: ${pduProcessor.constructor.name}-${this.getId()}, now active: ${this.pduProcessors.length} processors`);
+			this.logger.log1(`Adding PDU processor: ${pduProcessor.constructor.name}-${this.id}, now active: ${this.pduProcessors.length} processors`);
 			this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
 		} else {
-			this.logger.log1(`PDU processor: ${pduProcessor.constructor.name}-${this.getId()} already attached to session`);
+			this.logger.log1(`PDU processor: ${pduProcessor.constructor.name}-${this.id} already attached to session`);
 		}
 	}
 
 	removePduProcessor(pduProcessor: PduProcessor): void {
 		this.pduProcessors = this.pduProcessors.splice(this.pduProcessors.indexOf(pduProcessor), 1);
-		this.logger.log1(`Removing PDU processor: ${pduProcessor.constructor.name}-${this.getId()}, now active: ${this.pduProcessors.length} processors`);
+		this.logger.log1(`Removing PDU processor: ${pduProcessor.constructor.name}-${this.id}, now active: ${this.pduProcessors.length} processors`);
 		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
 	}
 

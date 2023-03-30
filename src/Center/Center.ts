@@ -14,16 +14,15 @@ export class Center extends SmppSession {
 		"CONNECTING",
 		"CONNECTED",
 	];
-
-	id: number;
-	username: string;
-	password: string;
-	status: string = this.STATUS[0];
+	_username: string;
+	_password: string;
+	_id: number;
+	_status: string = this.STATUS[0];
+	_defaultSingleJob: Job;
+	_defaultMultipleJob: Job;
 	port: number;
 
 	pduProcessors: PduProcessor[] = [];
-	defaultSingleJob!: Job;
-	defaultMultipleJob!: Job;
 	readonly logger: Logger;
 	private pendingSessions: any[] = [];
 	private sessions: any[] = [];
@@ -32,13 +31,13 @@ export class Center extends SmppSession {
 
 	constructor(id: number, port: number, username: string, password: string) {
 		super();
-		this.id = id;
-		this.username = username;
-		this.password = password;
+		this._id = id;
+		this._username = username;
+		this._password = password;
 		this.port = port;
 
-		this.defaultSingleJob = Job.createEmptySingle();
-		this.defaultMultipleJob = Job.createEmptyMultiple();
+		this._defaultSingleJob = Job.createEmptySingle();
+		this._defaultMultipleJob = Job.createEmptyMultiple();
 
 		this.logger = new Logger(`Center-${id}`);
 
@@ -49,9 +48,9 @@ export class Center extends SmppSession {
 		return new Promise((resolve, reject) => {
 			this.validateSessions(reject);
 			if (!job.count || !job.perSecond) {
-				reject(`Center-${this.getId()} sendMultiple failed: invalid job, missing fields`);
+				reject(`Center-${this.id} sendMultiple failed: invalid job, missing fields`);
 			}
-			this.logger.log1(`Center-${this.getId()} sending multiple messages: ${JSON.stringify(job)}`);
+			this.logger.log1(`Center-${this.id} sending multiple messages: ${JSON.stringify(job)}`);
 
 			let counter = 0;
 			let previousUpdateCounter = 0;
@@ -82,7 +81,7 @@ export class Center extends SmppSession {
 			if (!force) {
 				this.validateSessions(reject);
 			}
-			this.logger.log5(`Center-${this.getId()} sending PDU: ${JSON.stringify(pdu)}`);
+			this.logger.log5(`Center-${this.id} sending PDU: ${JSON.stringify(pdu)}`);
 			this.getNextSession().send(pdu, (replyPdu: any) => {
 				resolve(replyPdu);
 			});
@@ -98,7 +97,7 @@ export class Center extends SmppSession {
 
 	close(): Promise<void> {
 		return new Promise((resolve, reject) => {
-			this.logger.log1(`Center-${this.getId()} closing active connections`);
+			this.logger.log1(`Center-${this.id} closing active connections`);
 			this.server.close();
 			this.setStatus(0);
 			resolve();
@@ -138,10 +137,10 @@ export class Center extends SmppSession {
 	}
 
 	private eventBindTransceiver(session: any, pdu: PDU) {
-		this.logger.log1(`Center-${this.getId()} got a bind_transciever with system_id ${pdu.system_id} and password ${pdu.password}`);
+		this.logger.log1(`Center-${this.id} got a bind_transciever with system_id ${pdu.system_id} and password ${pdu.password}`);
 		session.pause();
 		if (pdu.system_id === this.username && pdu.password === this.password) {
-			this.logger.log1(`Center-${this.getId()} client connection successful`);
+			this.logger.log1(`Center-${this.id} client connection successful`);
 			if (pdu.response) {
 				session.send(pdu.response());
 			}
@@ -150,7 +149,7 @@ export class Center extends SmppSession {
 			this.sessions.push(session);
 			this.updateStatus();
 		} else {
-			this.logger.log1(`Center-${this.getId()} client connection failed, invalid credentials (expected: ${this.username}, ${this.password})`);
+			this.logger.log1(`Center-${this.id} client connection failed, invalid credentials (expected: ${this.username}, ${this.password})`);
 			if (pdu.response) {
 				session.send(pdu.response({
 					command_status: smpp.ESME_RBINDFAIL
@@ -163,7 +162,7 @@ export class Center extends SmppSession {
 	}
 
 	private eventSessionConnected(session: any): void {
-		this.logger.log1(`A client connected to center-${this.getId()}`);
+		this.logger.log1(`A client connected to center-${this.id}`);
 		this.pendingSessions.push(session);
 		session.on('close', this.eventSessionClose.bind(this, session));
 		session.on('error', this.eventSessionError.bind(this, session));
@@ -174,11 +173,11 @@ export class Center extends SmppSession {
 	}
 
 	private eventSessionError(session: any): void {
-		this.logger.log1(`A client encountered an error on center-${this.getId()}`);
+		this.logger.log1(`A client encountered an error on center-${this.id}`);
 	}
 
 	private eventSessionClose(session: any): void {
-		this.logger.log1(`A client disconnected from center-${this.getId()}`);
+		this.logger.log1(`A client disconnected from center-${this.id}`);
 		this.sessions = this.sessions.filter((s: any) => s !== session);
 		this.nextSession = 0;
 		this.pendingSessions = this.pendingSessions.filter((s: any) => s !== session);

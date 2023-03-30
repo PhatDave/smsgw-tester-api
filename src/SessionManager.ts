@@ -20,9 +20,9 @@ export abstract class SessionManager {
 
 	addSession(session: SmppSession): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
-			this.logger.log1(`Adding session with id ${session.getId()}`);
+			this.logger.log1(`Adding session with id ${session.id}`);
 			this.sessions.push(session);
-			this.eventEmitter.emit(this.SESSION_ADDED_EVENT, session.getId());
+			this.eventEmitter.emit(this.SESSION_ADDED_EVENT, session.id);
 			resolve();
 		});
 	}
@@ -37,8 +37,8 @@ export abstract class SessionManager {
 
 	removeSession(session: SmppSession): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
-			this.logger.log1(`Removing session with id ${session.getId()}`);
-			this.sessions = this.sessions.filter(s => s.getId() !== session.getId());
+			this.logger.log1(`Removing session with id ${session.id}`);
+			this.sessions = this.sessions.filter(s => s.id !== session.id);
 			resolve();
 		});
 	}
@@ -46,7 +46,7 @@ export abstract class SessionManager {
 	getSession(id: number): Promise<SmppSession> {
 		return new Promise<SmppSession>((resolve, reject) => {
 			this.logger.log1(`Looking for session with id ${id}...`);
-			let session: SmppSession | undefined = this.sessions.find(s => s.getId() == id);
+			let session: SmppSession | undefined = this.sessions.find(s => s.id == id);
 			if (session) {
 				this.logger.log1(`Found session with id ${id}`);
 				resolve(session);
@@ -65,8 +65,8 @@ export abstract class SessionManager {
 			this.logger.log1(`Loaded ${loadedSessions.length} clients from ${this.StorageFile}`);
 			loadedSessions.forEach(session => {
 				this.createSession(session.url || session.port, session.username, session.password).then((sessionObj: SmppSession) => {
-					sessionObj.setDefaultSingleJob(Job.deserialize(session.defaultSingleJob));
-					sessionObj.setDefaultMultipleJob(Job.deserialize(session.defaultMultipleJob));
+					sessionObj.defaultSingleJob = Job.deserialize(session.defaultSingleJob);
+					sessionObj.defaultMultipleJob = Job.deserialize(session.defaultMultipleJob);
 				});
 			});
 		} catch (e) {

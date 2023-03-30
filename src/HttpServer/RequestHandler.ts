@@ -23,10 +23,10 @@ export abstract class RequestHandler {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
 			this.logger.log1(`Session found with ID ${req.params.id}`)
 			if (!!req.body.username && req.body.username !== session.username) {
-				session.setUsername(req.body.username);
+				session.username = req.body.username;
 			}
 			if (!!req.body.password && req.body.password !== session.password) {
-				session.setPassword(req.body.password);
+				session.password = req.body.password;
 			}
 			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));
@@ -34,7 +34,7 @@ export abstract class RequestHandler {
 
 	doConfigureSingleJob(req: any, res: any): void {
 		this.sessionManager.getSession(Number(req.params.id)).then((session: SmppSession) => {
-			let job: Job = session.getDefaultSingleJob();
+			let job: Job = session.defaultSingleJob;
 			job.update(req);
 			this.logger.log1(`Updating default job on session with ID ${req.params.id}`);
 			res.send(session.serialize());
@@ -71,7 +71,7 @@ export abstract class RequestHandler {
 
 	doConfigureManyJob(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			let job: Job = session.getDefaultMultipleJob();
+			let job: Job = session.defaultMultipleJob;
 			job.update(req);
 			this.logger.log1(`Updating default job on session with ID ${req.params.id}`)
 			res.send(session.serialize());
@@ -144,6 +144,7 @@ export abstract class RequestHandler {
 	abstract doAddProcessor(req: any, res: any): void;
 
 	abstract doRemoveProcessor(req: any, res: any): void;
+
 	handleSessionNotFound(req: any, res: any): void {
 		let error = `No session found with ID ${req.params.id}`;
 		this.logger.log1(error);

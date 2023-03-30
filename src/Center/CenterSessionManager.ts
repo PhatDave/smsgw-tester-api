@@ -16,7 +16,6 @@ export class CenterSessionManager extends SessionManager {
 	constructor() {
 		super();
 		this.setup();
-		// super.eventEmitter.on(super.SESSION_ADDED_EVENT, (session: SmppSession) => this.eventEmitter.emit(this.SESSION_ADDED_EVENT, session));
 	}
 
 	comparatorFn: (arg: any, session: SmppSession) => boolean = (arg: any, session: SmppSession) => (session as Center).getPort() === arg;

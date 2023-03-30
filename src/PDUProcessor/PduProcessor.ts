@@ -4,10 +4,10 @@ import {SmppSession} from "../SmppSession";
 
 export abstract class PduProcessor {
 	static processors: PduProcessor[] = [];
+	private static logger: Logger = new Logger("PduProcessor");
 	abstract readonly serverSessionType: string;
 	readonly name: string = this.constructor.name;
 	readonly logger: Logger = new Logger(`PduProcessor: ${this.name}`);
-	private static logger: Logger = new Logger("PduProcessor");
 
 	static getProcessor(name: string): PduProcessor {
 		this.logger.log1(`Looking for processor with name ${name}...`);
@@ -22,19 +22,19 @@ export abstract class PduProcessor {
 	}
 
 	static attachProcessor(session: SmppSession, processor: PduProcessor): void {
-		this.logger.log1(`Trying to attach processor ${processor.name} to session ${session.constructor.name}-${session.getId()}`);
+		this.logger.log1(`Trying to attach processor ${processor.name} to session ${session.constructor.name}-${session.id}`);
 		if (PduProcessor.areCompatible(session, processor)) {
 			session.addPduProcessor(processor);
 		}
 	}
 
 	static detachProcessor(session: SmppSession, processor: PduProcessor): void {
-		this.logger.log1(`Trying to detach processor ${processor.name} from session ${session.constructor.name}-${session.getId()}`);
+		this.logger.log1(`Trying to detach processor ${processor.name} from session ${session.constructor.name}-${session.id}`);
 		session.removePduProcessor(processor);
 	}
 
 	static areCompatible(session: SmppSession, processor: PduProcessor): boolean {
-		this.logger.log1(`Checking compatibility between session ${session.constructor.name}-${session.getId()} and processor ${processor.name}`);
+		this.logger.log1(`Checking compatibility between session ${session.constructor.name}-${session.id} and processor ${processor.name}`);
 		return session.constructor.name === processor.serverSessionType;
 	}
 

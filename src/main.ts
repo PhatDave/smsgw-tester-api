@@ -9,7 +9,6 @@ import {WSServer} from "./WS/WSServer";
 
 const {PDU} = require("smpp");
 // TODO: Add support for encodings
-// TODO: Implement some sort of metrics on frontend by counting the pdus
 
 let logger = new Logger("main");
 
@@ -29,7 +28,7 @@ function cleanup(): void {
 	process.exit(0);
 }
 
-// process.on('exit', cleanup);
-// process.on('SIGINT', cleanup);
-// process.on('SIGUSR1', cleanup);
-// process.on('SIGUSR2', cleanup);
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGUSR1', cleanup);
+process.on('SIGUSR2', cleanup);

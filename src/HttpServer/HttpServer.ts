@@ -10,8 +10,8 @@ const bodyParser = require("body-parser");
 const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
 
 export class HttpServer {
-	private clientRequestHandler: RequestHandler;
-	private centerRequestHandler: RequestHandler;
+	private readonly clientRequestHandler: RequestHandler;
+	private readonly centerRequestHandler: RequestHandler;
 
 	private app: any;
 	private server: any;
@@ -24,8 +24,8 @@ export class HttpServer {
 		this.app = express();
 		this.app.use(bodyParser.json());
 
-		let clientApiPath = 'ClientEntity';
-		let centerApiPath = 'CenterEntity';
+		let clientApiPath: string = 'ClientEntity';
+		let centerApiPath: string = 'CenterEntity';
 
 		this.app.get(`/api/${clientApiPath}`, this.clientRequestHandler.doGet.bind(this.clientRequestHandler));
 		this.app.post(`/api/${clientApiPath}`, this.clientRequestHandler.doPost.bind(this.clientRequestHandler));
