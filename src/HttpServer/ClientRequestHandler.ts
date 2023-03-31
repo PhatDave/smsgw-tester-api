@@ -55,7 +55,7 @@ export default class ClientRequestHandler extends RequestHandler {
 
 	doConnect(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			this.logger.log1(`Connecting client session with ID ${req.params.id}`)
+			this.logger.log1(`Connecting client session with ID ${req.params.id}`);
 			let client = session as Client;
 			client.doConnect()
 				.then(() => res.send(session.serialize()))

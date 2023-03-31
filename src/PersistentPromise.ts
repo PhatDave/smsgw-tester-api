@@ -5,9 +5,9 @@ export default class PersistentPromise {
 
 	constructor(callback: (resolve: (value?: any) => void, reject: (reason?: any) => void) => void) {
 		this.promise = new Promise((resolve, reject) => {
-			callback(resolve, reject);
 			this.promiseResolve = resolve;
 			this.promiseReject = reject;
+			callback(resolve, reject);
 		});
 	}
 

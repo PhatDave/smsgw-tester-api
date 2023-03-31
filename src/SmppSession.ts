@@ -31,12 +31,20 @@ export abstract class SmppSession {
 
 	abstract _username: string;
 
+	get username(): string {
+		return this._username;
+	}
+
 	set username(username: string) {
 		this._username = username;
 		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
 	}
 
 	abstract _password: string;
+
+	get password(): string {
+		return this._password;
+	}
 
 	set password(password: string) {
 		this._password = password;

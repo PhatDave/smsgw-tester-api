@@ -18,5 +18,5 @@ export class CenterSessionManager extends SessionManager {
 		this.setup();
 	}
 
-	comparatorFn: (arg: any, session: SmppSession) => boolean = (arg: any, session: SmppSession) => (session as Center).getPort() === arg;
+	comparatorFn: (arg: any, session: SmppSession) => boolean = (arg: any, session: SmppSession) => (session as Center).port === arg;
 }

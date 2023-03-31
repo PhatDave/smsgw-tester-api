@@ -175,10 +175,6 @@ export class Client extends SmppSession {
 		});
 	}
 
-	getUrl(): string {
-		return this.url;
-	}
-
 	private connectSession(): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this.validateFields(reject);
@@ -198,11 +194,13 @@ export class Client extends SmppSession {
 		this.setStatus(2);
 		if (this.connectPromise) {
 			this.connectPromise.resolve();
+		} else {
+			this.logger.log1(`Client-${this.id} connected without connect promise`);
 		}
 	}
 
-	private eventSessionError(pdu: PDU): void {
-		this.logger.log1(`Client-${this.id} error on ${this.url}`);
+	private eventSessionError(pdu: any): void {
+		this.logger.log1(`Client-${this.id} error on ${this.url} - ${pdu.message}`);
 		this.setStatus(0);
 		this.rejectPromises();
 	}

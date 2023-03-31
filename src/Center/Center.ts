@@ -141,10 +141,6 @@ export class Center extends SmppSession {
 		};
 	}
 
-	getPort(): number {
-		return this.port;
-	}
-
 	private validateSessions(reject: (reason?: any) => void) {
 		if (this.sessions.length === 0) {
 			reject(`No clients connected`);

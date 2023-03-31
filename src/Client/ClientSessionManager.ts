@@ -18,5 +18,5 @@ export default class ClientSessionManager extends SessionManager {
 		this.setup();
 	}
 
-	comparatorFn: (arg: any, session: SmppSession) => boolean = (arg: any, session: SmppSession) => (session as Client).getUrl() === arg;
+	comparatorFn: (arg: any, session: SmppSession) => boolean = (arg: any, session: SmppSession) => (session as Client).url === arg;
 }

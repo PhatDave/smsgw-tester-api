@@ -43,7 +43,7 @@ export abstract class RequestHandler {
 
 	doSendSingleJob(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			this.logger.log1(`Sending pre-configured message on session with ID ${req.params.id}`)
+			this.logger.log1(`Sending pre-configured message on session with ID ${req.params.id}`);
 			session.sendSingleDefault()
 				.then(pdu => res.send(pdu),
 					err => res.status(400).send({
@@ -55,7 +55,7 @@ export abstract class RequestHandler {
 
 	doSend(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			this.logger.log1(`Sending message on session with ID ${req.params.id}`)
+			this.logger.log1(`Sending message on session with ID ${req.params.id}`);
 			let tempJob: Job = JSON.parse(JSON.stringify(session.defaultSingleJob));
 			tempJob.pdu.source_addr = req.body.source;
 			tempJob.pdu.destination_addr = req.body.destination;
@@ -73,14 +73,14 @@ export abstract class RequestHandler {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
 			let job: Job = session.defaultMultipleJob;
 			job.update(req);
-			this.logger.log1(`Updating default job on session with ID ${req.params.id}`)
+			this.logger.log1(`Updating default job on session with ID ${req.params.id}`);
 			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}
 
 	doSendManyJob(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			this.logger.log1(`Sending pre-configured messages on session with ID ${req.params.id}`)
+			this.logger.log1(`Sending pre-configured messages on session with ID ${req.params.id}`);
 			session.sendMultipleDefault()
 				.then(() => res.send({}),
 					err => res.status(400).send({
@@ -92,7 +92,7 @@ export abstract class RequestHandler {
 
 	doSendMany(req: any, res: any) {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			this.logger.log1(`Sending message on session with ID ${req.params.id}`)
+			this.logger.log1(`Sending message on session with ID ${req.params.id}`);
 			let tempJob: Job = JSON.parse(JSON.stringify(session.defaultMultipleJob));
 			tempJob.pdu.source_addr = req.body.source;
 			tempJob.pdu.destination_addr = req.body.destination;
@@ -112,6 +112,7 @@ export abstract class RequestHandler {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
 			this.logger.log1(`Cancelling send timer for session with ID ${req.params.id}`);
 			session.cancelSendInterval();
+			res.send({});
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}
 
@@ -127,7 +128,9 @@ export abstract class RequestHandler {
 
 	doDelete(req: any, res: any) {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
+			this.logger.log1(`Deleting session with ID ${req.params.id}`);
 			this.sessionManager.removeSession(session);
+			res.send({});
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}
 
