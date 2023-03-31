@@ -10,7 +10,7 @@ export default class ClientSessionManager extends SessionManager {
 	ManagedSessionClass: typeof Client = Client;
 	sessionId: number = 0;
 	sessions: Client[] = [];
-	identifier: string = "client";
+	identifier: string = "Client";
 	readonly logger: Logger = new Logger("ClientSessionManager");
 
 	constructor() {

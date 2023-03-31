@@ -131,22 +131,22 @@ export abstract class SmppSession {
 		this.logger.log1(`Update WS: ${event}`);
 		let message: {
 			type: string,
-			data?: string
+			data?: any
 		} = {
 			type: event,
 		};
 		switch (event) {
 			case this.EVENT.STATE_CHANGED:
-				message.data = JSON.stringify(this.serialize());
+				message.data = this.serialize();
 				break;
 			case this.EVENT.STATUS_CHANGED:
-				message.data = JSON.stringify(this.status);
+				message.data = this.status;
 				break;
 			case this.EVENT.ANY_PDU:
-				message.data = JSON.stringify(args![0]);
+				message.data = args![0];
 				break;
 			case this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT:
-				message.data = JSON.stringify(args![0]);
+				message.data = args![0];
 				break;
 		}
 		this.eventEmitter.emit(this.UPDATE_WS, message);

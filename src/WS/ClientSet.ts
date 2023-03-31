@@ -19,6 +19,7 @@ export class ClientSet {
 		this.sessionId = parseInt(data[1]);
 
 		this.logger = new Logger(`ClientSet-${this.type}-${this.sessionId}`);
+		this.logger.log1(`Created client set for ${this.type} ${this.sessionId}`);
 
 		this.relevantSessionManager = sessionManagers.find(sm => sm.identifier === this.type);
 		if (!this.relevantSessionManager) {
@@ -45,7 +46,7 @@ export class ClientSet {
 	add(ws: any): void {
 		this.logger.log2(`Added client`);
 		this.clients.push(ws);
-		ws.on('close', this.eventOnClose.bind(this));
+		ws.on('close', this.eventOnClose.bind(this, ws));
 	}
 
 	eventOnClose(ws: any): void {
@@ -54,10 +55,12 @@ export class ClientSet {
 	}
 
 	notifyClients(message: string) {
-		this.logger.log2(`Notifying clients: ${message}`);
-		this.clients.forEach((ws) => {
-			ws.send(message);
-		});
+		if (this.clients.length > 0) {
+			this.logger.log2(`Notifying clients: ${message}`);
+			this.clients.forEach((ws) => {
+				ws.send(message);
+			});
+		}
 	}
 
 	private attachListener(session: SmppSession) {

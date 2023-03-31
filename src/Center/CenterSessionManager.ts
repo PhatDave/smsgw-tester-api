@@ -10,7 +10,7 @@ export class CenterSessionManager extends SessionManager {
 	ManagedSessionClass: typeof Center = Center;
 	sessionId: number = 0;
 	sessions: Center[] = [];
-	identifier: string = "center";
+	identifier: string = "Client";
 	readonly logger: Logger = new Logger("CenterSessionManager");
 
 	constructor() {

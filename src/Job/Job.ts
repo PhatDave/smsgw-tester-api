@@ -2,15 +2,17 @@ import EventEmitter from "events";
 import {PDU, SerializedJob} from "../CommonObjects";
 
 const smpp = require("smpp");
-
+// TODO: Use pdu.data_coding for data coding
+// See available schemes here https://messaggio.com/industry-specifications-and-standards/smpp-data-coding-scheme/
 export class Job {
 	static readonly STATE_CHANGED: string = "STATE_CHANGED";
 	private eventEmitter: EventEmitter = new EventEmitter();
 
 	constructor(pdu: PDU, perSecond?: number, count?: number) {
 		if (pdu.short_message && pdu.short_message.type === "Buffer") {
-			pdu.short_message = String(pdu.short_message.data);
+			pdu.short_message = Buffer.from(pdu.short_message.data, 'ascii').toString();
 		}
+		pdu.short_message = 'test123';
 		this._pdu = pdu;
 		this._perSecond = perSecond;
 		this._count = count;

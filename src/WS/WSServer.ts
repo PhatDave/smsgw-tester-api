@@ -39,6 +39,7 @@ export class WSServer {
 		let clientSet: ClientSet | undefined = this.clients.find((clientSet: ClientSet) => clientSet.identifier === message);
 		if (!clientSet) {
 			clientSet = new ClientSet(message, this.sessionManagers);
+			this.clients.push(clientSet);
 		}
 		clientSet.add(ws);
 	}
