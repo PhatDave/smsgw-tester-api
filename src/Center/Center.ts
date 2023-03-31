@@ -13,6 +13,7 @@ export class Center extends SmppSession {
 		"WAITING CONNECTION",
 		"CONNECTING",
 		"CONNECTED",
+		"BUSY"
 	];
 	_username: string;
 	_password: string;
@@ -88,9 +89,11 @@ export class Center extends SmppSession {
 
 			let count = job.count || 1;
 			let interval = 1 / (job.perSecond || 1);
+			this.setStatus(3);
 			this.sendTimer.setInterval(() => {
 				if (count > 0 && counter >= count) {
 					this.cancelSendInterval();
+					this.setStatus(2);
 				} else {
 					this.sendPdu(job.pdu, true);
 					counter++;
