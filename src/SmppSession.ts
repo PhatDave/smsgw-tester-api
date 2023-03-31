@@ -13,7 +13,7 @@ export abstract class SmppSession {
 		ANY_PDU: "ANY_PDU",
 		MESSAGE_SEND_COUNTER_UPDATE_EVENT: "MESSAGE_SEND_COUNTER_UPDATE_EVENT",
 	};
-	abstract STATUS: string[];
+	abstract STATUSES: string[];
 	abstract pduProcessors: PduProcessor[];
 	readonly UPDATE_WS: string = "UPDATE_WS";
 	readonly eventEmitter: EventEmitter = new EventEmitter();
@@ -93,7 +93,7 @@ export abstract class SmppSession {
 	}
 
 	setStatus(statusIndex: number) {
-		this._status = this.STATUS[statusIndex];
+		this._status = this.STATUSES[statusIndex];
 		this.eventEmitter.emit(this.EVENT.STATUS_CHANGED, this.status);
 	}
 
@@ -116,6 +116,7 @@ export abstract class SmppSession {
 	cancelSendInterval(): void {
 		this.sendTimer.clearInterval();
 		this.counterUpdateTimer.clearInterval();
+		this.setStatus(this.STATUSES.length - 2);
 	}
 
 	abstract close(): Promise<void>;

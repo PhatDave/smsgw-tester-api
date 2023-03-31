@@ -9,7 +9,7 @@ const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
 
 export class Center extends SmppSession {
-	readonly STATUS: string[] = [
+	readonly STATUSES: string[] = [
 		"WAITING CONNECTION",
 		"CONNECTING",
 		"CONNECTED",
@@ -18,7 +18,7 @@ export class Center extends SmppSession {
 	_username: string;
 	_password: string;
 	_id: number;
-	_status: string = this.STATUS[0];
+	_status: string = this.STATUSES[0];
 	port: number;
 
 	pduProcessors: PduProcessor[] = [];
@@ -93,7 +93,6 @@ export class Center extends SmppSession {
 			this.sendTimer.setInterval(() => {
 				if (count > 0 && counter >= count) {
 					this.cancelSendInterval();
-					this.setStatus(2);
 				} else {
 					this.sendPdu(job.pdu, true);
 					counter++;

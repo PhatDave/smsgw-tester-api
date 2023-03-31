@@ -11,7 +11,7 @@ const smpp = require("smpp");
 const AUTO_ENQUIRE_LINK_PERIOD: number = Number(process.env.AUTO_ENQUIRE_LINK_PERIOD) || 30000;
 
 export class Client extends SmppSession {
-	readonly STATUS: string[] = [
+	readonly STATUSES: string[] = [
 		"NOT CONNECTED",
 		"CONNECTING",
 		"CONNECTED",
@@ -23,7 +23,7 @@ export class Client extends SmppSession {
 	_username: string;
 	_password: string;
 	_id: number;
-	_status: string = this.STATUS[0];
+	_status: string = this.STATUSES[0];
 	pduProcessors: PduProcessor[] = [];
 	readonly logger: Logger;
 	private session?: any;
@@ -72,7 +72,7 @@ export class Client extends SmppSession {
 
 	doConnect(): PersistentPromise {
 		this.connectPromise = new PersistentPromise((resolve, reject) => {
-			if (this.status !== this.STATUS[0]) {
+			if (this.status !== this.STATUSES[0]) {
 				let errorString = `Client-${this.id} already connected`;
 				this.logger.log1(errorString);
 				reject(errorString);
@@ -150,8 +150,8 @@ export class Client extends SmppSession {
 
 			this.setStatus(4);
 
-			let counter = 0;
-			let previousUpdateCounter = 0;
+			let counter: number = 0;
+			let previousUpdateCounter: number = 0;
 
 			this.counterUpdateTimer.setInterval(() => {
 				if (previousUpdateCounter !== counter) {
@@ -160,8 +160,9 @@ export class Client extends SmppSession {
 				}
 			}, '', `${this.MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
 
-			let count = job.count || 1;
-			let interval = 1 / (job.perSecond || 1);
+			let count: number = job.count || 1;
+			let interval: number = 1 / (job.perSecond || 1);
+			this.setStatus(5);
 			this.sendTimer.setInterval(() => {
 				if (count > 0 && counter >= count) {
 					this.cancelSendInterval();
@@ -266,7 +267,7 @@ export class Client extends SmppSession {
 	}
 
 	private validateBound(reject: (reason?: any) => void) {
-		if (this.status !== this.STATUS[4]) {
+		if (this.status !== this.STATUSES[4]) {
 			let errorMessage = `Client-${this.id} is not bound`;
 			this.logger.log1(errorMessage);
 			reject(errorMessage);
