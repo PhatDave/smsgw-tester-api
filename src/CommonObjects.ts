@@ -17,7 +17,7 @@ export type PDU = {
 	schedule_delivery_time?: string,
 	sequence_number?: number,
 	service_type?: string,
-	short_message?: string,
+	short_message?: any,
 	sm_default_msg_id?: number,
 	source_addr?: string,
 	source_addr_npi?: number,
