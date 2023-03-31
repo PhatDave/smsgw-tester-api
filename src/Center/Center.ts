@@ -122,7 +122,9 @@ export class Center extends SmppSession {
 	close(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.logger.log1(`Center-${this.id} closing active connections`);
-			this.server.close();
+			this.sessions.forEach((session: any) => {
+				session.close();
+			});
 			this.setStatus(0);
 			resolve();
 		});
