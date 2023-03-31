@@ -8,7 +8,6 @@ import {PduProcessor} from "./PDUProcessor/PduProcessor";
 import {WSServer} from "./WS/WSServer";
 
 const {PDU} = require("smpp");
-// TODO: Add support for encodings
 
 let logger = new Logger("main");
 
@@ -17,7 +16,9 @@ PduProcessor.addProcessor(EchoPduProcessor);
 
 let clientManager: ClientSessionManager = new ClientSessionManager();
 let centerManager: CenterSessionManager = new CenterSessionManager();
-
+// TODO: Add support for encodings
+// TODO: Fix reading and writing processors
+// TODO: Try creating multiple entries with the same arg
 let wss: WSServer = new WSServer([clientManager, centerManager]);
 let httpServer: HttpServer = new HttpServer(clientManager, centerManager);
 

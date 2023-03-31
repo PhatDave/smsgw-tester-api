@@ -11,10 +11,6 @@ export default class PersistentPromise {
 		});
 	}
 
-	getPromise(): Promise<any> {
-		return this.promise;
-	}
-
 	resolve(value?: any): void {
 		if (this.promiseResolve) {
 			this.promiseResolve(value);
