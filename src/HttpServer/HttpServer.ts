@@ -6,6 +6,8 @@ import {RequestHandler} from "./RequestHandler";
 
 const express = require("express");
 const bodyParser = require("body-parser");
+const compression = require("compression");
+const zlib = require("zlib");
 
 const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
 
@@ -23,6 +25,11 @@ export class HttpServer {
 
 		this.app = express();
 		this.app.use(bodyParser.json());
+
+		this.app.use(compression({
+			level: 9,
+			strategy: zlib.constants.BROTLI_MODE_TEXT,
+		}));
 
 		let clientApiPath: string = 'ClientEntity';
 		let centerApiPath: string = 'CenterEntity';
