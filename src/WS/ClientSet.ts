@@ -1,6 +1,7 @@
 import Logger from "../Logger";
 import {SessionManager} from "../SessionManager";
 import {SmppSession} from "../SmppSession";
+import ZlibCoder from "../ZlibCoder";
 
 export class ClientSet {
 	identifier: string;
@@ -55,10 +56,11 @@ export class ClientSet {
 	}
 
 	notifyClients(message: string) {
+		let compressedMessage = ZlibCoder.compress(message);
 		if (this.clients.length > 0) {
 			this.logger.log2(`Notifying clients: ${message}`);
 			this.clients.forEach((ws) => {
-				ws.send(message);
+				ws.send(compressedMessage);
 			});
 		}
 	}
