@@ -1,4 +1,6 @@
+import {Center} from "./Center/Center";
 import {CenterSessionManager} from "./Center/CenterSessionManager";
+import {Client} from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import {HttpServer} from "./HttpServer/HttpServer";
 import Logger from "./Logger";
@@ -28,6 +30,22 @@ function cleanup(): void {
 	centerManager.cleanup();
 	process.exit(0);
 }
+
+async function main() {
+	let client: Client = await clientManager.getSession(0) as Client
+	let center: Center = await centerManager.getSession(0) as Center;
+	setInterval(async () => {
+		await client.doConnect();
+		setTimeout(async () => {
+			await client.doBind();
+			setTimeout(async () => {
+				await center.close();
+			}, 1000);
+		}, 1000);
+	}, 3000);
+}
+
+// main();
 
 // process.on('exit', cleanup);
 // process.on('SIGINT', cleanup);
