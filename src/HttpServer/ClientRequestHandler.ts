@@ -15,19 +15,19 @@ export default class ClientRequestHandler extends RequestHandler {
 	}
 
 	doGetAvailableProcessors(req: any, res: any): void {
-		throw new Error("Method not implemented.");
+		res.send([]);
 	}
 
 	doGetAppliedProcessors(req: any, res: any): void {
-		throw new Error("Method not implemented.");
+		res.send([]);
 	}
 
 	doAddProcessor(req: any, res: any): void {
-		throw new Error("Method not implemented.");
+		res.send([]);
 	}
 
 	doRemoveProcessor(req: any, res: any): void {
-		throw new Error("Method not implemented.");
+		res.send([]);
 	}
 
 	doPost(req: any, res: any): void {

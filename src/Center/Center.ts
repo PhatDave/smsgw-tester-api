@@ -142,6 +142,7 @@ export class Center extends SmppSession {
 			defaultSingleJob: this._defaultSingleJob.serialize(),
 			defaultMultipleJob: this._defaultMultipleJob.serialize(),
 			processors: this.pduProcessors.map(p => p.serialize()),
+			availableProcessors: PduProcessor.getProcessorsForType(Center.name)
 		};
 	}
 

@@ -30,7 +30,7 @@ export class CenterRequestHandler extends RequestHandler {
 
 	doAddProcessor(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			let processor = PduProcessor.getProcessor(req.body.name);
+			let processor: PduProcessor = PduProcessor.getProcessor(req.body.name);
 			PduProcessor.attachProcessor(session, processor);
 			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));
@@ -38,7 +38,7 @@ export class CenterRequestHandler extends RequestHandler {
 
 	doRemoveProcessor(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			let processor = PduProcessor.getProcessor(req.body.name);
+			let processor: PduProcessor = PduProcessor.getProcessor(req.body.name);
 			PduProcessor.detachProcessor(session, processor);
 			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));

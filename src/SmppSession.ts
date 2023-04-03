@@ -167,7 +167,7 @@ export abstract class SmppSession {
 	}
 
 	removePduProcessor(pduProcessor: PduProcessor): void {
-		this.pduProcessors = this.pduProcessors.splice(this.pduProcessors.indexOf(pduProcessor), 1);
+		this.pduProcessors.splice(this.pduProcessors.indexOf(pduProcessor), 1);
 		this.logger.log1(`Removing PDU processor: ${pduProcessor.constructor.name}-${this.id}, now active: ${this.pduProcessors.length} processors`);
 		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
 	}

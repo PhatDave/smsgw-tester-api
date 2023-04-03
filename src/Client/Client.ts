@@ -1,3 +1,4 @@
+import {Center} from "../Center/Center";
 import {PDU} from "../CommonObjects";
 import {Job} from "../Job/Job";
 import Logger from "../Logger";
@@ -120,6 +121,7 @@ export class Client extends SmppSession {
 			defaultSingleJob: this._defaultSingleJob.serialize(),
 			defaultMultipleJob: this._defaultMultipleJob.serialize(),
 			processors: this.pduProcessors.map(p => p.serialize()),
+			availableProcessors: PduProcessor.getProcessorsForType(Client.name)
 		};
 	}
 
