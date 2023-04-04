@@ -4,6 +4,8 @@ import {Client} from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import {HttpServer} from "./HttpServer/HttpServer";
 import Logger from "./Logger";
+import {DestinationEnumeratorProcessor} from "./PDUProcessor/Client/DestinationEnumeratorProcessor";
+import {SourceEnumeratorProcessor} from "./PDUProcessor/Client/SourceEnumeratorProcessor";
 import {DebugPduProcessor} from "./PDUProcessor/DebugPduProcessor";
 import {EchoPduProcessor} from "./PDUProcessor/EchoPduProcessor";
 import {PduProcessor} from "./PDUProcessor/PduProcessor";
@@ -15,6 +17,8 @@ let logger = new Logger("main");
 
 PduProcessor.addProcessor(DebugPduProcessor);
 PduProcessor.addProcessor(EchoPduProcessor);
+PduProcessor.addProcessor(DestinationEnumeratorProcessor);
+PduProcessor.addProcessor(SourceEnumeratorProcessor);
 
 let clientManager: ClientSessionManager = new ClientSessionManager();
 let centerManager: CenterSessionManager = new CenterSessionManager();
@@ -47,7 +51,7 @@ async function main() {
 
 // main();
 
-// process.on('exit', cleanup);
-// process.on('SIGINT', cleanup);
-// process.on('SIGUSR1', cleanup);
-// process.on('SIGUSR2', cleanup);
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGUSR1', cleanup);
+process.on('SIGUSR2', cleanup);

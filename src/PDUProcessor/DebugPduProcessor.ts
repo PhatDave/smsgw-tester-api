@@ -12,6 +12,6 @@ export class DebugPduProcessor extends PduProcessor {
 					resolve(replyPdu);
 				});
 			}
-		})
+		});
 	}
 }

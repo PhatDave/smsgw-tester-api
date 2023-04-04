@@ -39,8 +39,8 @@ export class Client extends SmppSession {
 		this._password = password;
 		this.url = url;
 
-		this._defaultSingleJob = Job.createEmptySingle();
-		this._defaultMultipleJob = Job.createEmptyMultiple();
+		this._defaultSingleJob = Job.createEmptySingle('submit_sm');
+		this._defaultMultipleJob = Job.createEmptyMultiple('submit_sm');
 
 		this.logger = new Logger(`Client-${id}`);
 	}
@@ -130,14 +130,16 @@ export class Client extends SmppSession {
 		return Promise.resolve(this.session.close());
 	}
 
-	sendPdu(pdu: object, force?: boolean): Promise<object> {
+	sendPdu(pdu: any, force?: boolean): Promise<object> {
 		return new Promise((resolve, reject) => {
 			if (!force) {
 				this.validateSession(reject);
 				this.validateBound(reject);
 			}
-			this.logger.log5(`Client-${this.id} sending PDU: ${JSON.stringify(pdu)}`);
-			this.session.send(pdu, (replyPdu: object) => resolve(replyPdu));
+			let pduCopy = new smpp.PDU(pdu.command, {...pdu})
+			this.pduProcessors.forEach((processor: PduProcessor) => processor.processPdu(this.session, pduCopy));
+			this.logger.log5(`Client-${this.id} sending PDU: ${JSON.stringify(pduCopy)}`);
+			this.session.send(pduCopy, (replyPdu: object) => resolve(replyPdu));
 		});
 	}
 
@@ -169,7 +171,7 @@ export class Client extends SmppSession {
 				if (count > 0 && counter >= count) {
 					this.cancelSendInterval();
 				} else {
-					this.sendPdu(job.pdu, true)
+						this.sendPdu(job.pdu, true)
 						.catch(e => this.logger.log1(`Error sending message: ${e}`));
 					counter++;
 				}
@@ -274,5 +276,10 @@ export class Client extends SmppSession {
 			this.logger.log1(errorMessage);
 			reject(errorMessage);
 		}
+	}
+
+	eventAnyPdu(session: any, pdu: any): Promise<any> {
+		this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
+		return Promise.resolve();
 	}
 }

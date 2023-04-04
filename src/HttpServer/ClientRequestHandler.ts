@@ -1,6 +1,8 @@
+import {Center} from "../Center/Center";
 import {Client} from "../Client/Client";
 import ClientSessionManager from "../Client/ClientSessionManager";
 import Logger from "../Logger";
+import {PduProcessor} from "../PDUProcessor/PduProcessor";
 import {SessionManager} from "../SessionManager";
 import {SmppSession} from "../SmppSession";
 import {RequestHandler} from "./RequestHandler";
@@ -15,19 +17,32 @@ export default class ClientRequestHandler extends RequestHandler {
 	}
 
 	doGetAvailableProcessors(req: any, res: any): void {
-		res.send([]);
+		this.logger.log1("Getting available processors");
+		let processors: PduProcessor[] = PduProcessor.getProcessorsForType(Client.name);
+		res.send(processors.map((processor: any) => processor.serialize()));
 	}
 
 	doGetAppliedProcessors(req: any, res: any): void {
-		res.send([]);
+		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
+			let processors: PduProcessor[] = session.pduProcessors;
+			res.send(processors.map((processor: any) => processor.serialize()));
+		}, this.handleSessionNotFound.bind(this, req, res));
 	}
 
 	doAddProcessor(req: any, res: any): void {
-		res.send([]);
+		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
+			let processor: PduProcessor = PduProcessor.getProcessor(req.body.name);
+			PduProcessor.attachProcessor(session, processor);
+			res.send(session.serialize());
+		}, this.handleSessionNotFound.bind(this, req, res));
 	}
 
 	doRemoveProcessor(req: any, res: any): void {
-		res.send([]);
+		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
+			let processor: PduProcessor = PduProcessor.getProcessor(req.body.name);
+			PduProcessor.detachProcessor(session, processor);
+			res.send(session.serialize());
+		}, this.handleSessionNotFound.bind(this, req, res));
 	}
 
 	doPost(req: any, res: any): void {

@@ -9,13 +9,19 @@ export class Job {
 	private eventEmitter: EventEmitter = new EventEmitter();
 
 	constructor(pdu: PDU, perSecond?: number, count?: number) {
-		if (pdu.short_message && pdu.short_message.type === "Buffer") {
-			pdu.short_message = Buffer.from(pdu.short_message.data, 'ascii').toString();
-		}
-		pdu.short_message = 'test123';
+		Job.pduParseShortMessage(pdu);
 		this._pdu = pdu;
 		this._perSecond = perSecond;
 		this._count = count;
+	}
+
+	static pduParseShortMessage(pdu: PDU) {
+		if (pdu.short_message && pdu.short_message.type === "Buffer") {
+			pdu.short_message = Buffer.from(pdu.short_message.data, 'ascii').toString();
+		}
+		if (typeof pdu.short_message === "object") {
+			pdu.short_message = pdu.short_message.toString();
+		}
 	}
 
 	private _pdu: PDU;
@@ -51,22 +57,19 @@ export class Job {
 		this.eventEmitter.emit(Job.STATE_CHANGED, {});
 	}
 
-	static createEmptySingle(): Job {
-		return new Job({});
+	static createEmptySingle(command: string): Job {
+		let pdu1 = new smpp.PDU(command, {});
+		Job.pduParseShortMessage(pdu1);
+		return new Job(pdu1);
 	}
 
-	static createEmptyMultiple(): Job {
-		return new Job({}, 1, 1);
+	static createEmptyMultiple(command: string): Job {
+		let pdu1 = new smpp.PDU(command, {});
+		Job.pduParseShortMessage(pdu1);
+		return new Job(pdu1, 1, 1);
 	}
 
 	static deserialize(serialized: SerializedJob): Job {
-		if (!serialized.pdu || !serialized.pdu.command) {
-			if (!serialized.perSecond && !serialized.count) {
-				return Job.createEmptySingle();
-			} else {
-				return Job.createEmptyMultiple();
-			}
-		}
 		let pdu: PDU = new smpp.PDU(serialized.pdu.command, serialized.pdu);
 		return new Job(pdu, serialized.perSecond, serialized.count);
 	}

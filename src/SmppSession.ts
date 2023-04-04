@@ -183,19 +183,5 @@ export abstract class SmppSession {
 		});
 	}
 
-	eventAnyPdu(session: any, pdu: any): Promise<any> {
-		this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
-		let successful: number = 0;
-		this.pduProcessors.forEach((pduProcessor: PduProcessor) => {
-			pduProcessor.processPdu(session, pdu).then((result: any) => {
-				successful++;
-			}, (error: any) => {
-			});
-		});
-		if (successful === 0) {
-			return Promise.resolve("No PDU processor was able to process the PDU");
-		} else {
-			return Promise.resolve();
-		}
-	}
+	abstract eventAnyPdu(session: any, pdu: any): Promise<any>;
 }
