@@ -2,6 +2,7 @@ import {Center} from "../Center/Center";
 import {PDU} from "../CommonObjects";
 import {Job} from "../Job/Job";
 import Logger from "../Logger";
+import {DeliverSmReplyProcessor} from "../PDUProcessor/Client/DeliverSmReplyProcessor";
 import {PduProcessor} from "../PDUProcessor/PduProcessor";
 import PersistentPromise from "../PersistentPromise";
 import {SmppSession} from "../SmppSession";
@@ -41,6 +42,8 @@ export class Client extends SmppSession {
 
 		this._defaultSingleJob = Job.createEmptySingle('submit_sm');
 		this._defaultMultipleJob = Job.createEmptyMultiple('submit_sm');
+
+		this.addPduProcessor(PduProcessor.getProcessor(DeliverSmReplyProcessor.name));
 
 		this.logger = new Logger(`Client-${id}`);
 	}

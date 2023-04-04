@@ -4,6 +4,7 @@ import {Client} from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import {HttpServer} from "./HttpServer/HttpServer";
 import Logger from "./Logger";
+import {DeliverSmReplyProcessor} from "./PDUProcessor/Client/DeliverSmReplyProcessor";
 import {DestinationEnumeratorProcessor} from "./PDUProcessor/Client/DestinationEnumeratorProcessor";
 import {SourceEnumeratorProcessor} from "./PDUProcessor/Client/SourceEnumeratorProcessor";
 import {DebugPduProcessor} from "./PDUProcessor/DebugPduProcessor";
@@ -19,6 +20,7 @@ PduProcessor.addProcessor(DebugPduProcessor);
 PduProcessor.addProcessor(EchoPduProcessor);
 PduProcessor.addProcessor(DestinationEnumeratorProcessor);
 PduProcessor.addProcessor(SourceEnumeratorProcessor);
+PduProcessor.addProcessor(DeliverSmReplyProcessor);
 
 let clientManager: ClientSessionManager = new ClientSessionManager();
 let centerManager: CenterSessionManager = new CenterSessionManager();
