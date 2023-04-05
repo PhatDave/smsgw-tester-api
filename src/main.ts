@@ -3,17 +3,20 @@ import CenterSessionManager from "./Center/CenterSessionManager";
 import Client from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import Logger from "./Logger";
+import ProcessorManager from "./PDUProcessor/ProcessorManager";
+import WSServer from "./WS/WSServer";
 
 const {PDU} = require("smpp");
 
 let logger = new Logger("main");
 
+new ProcessorManager();
 let clientManager: ClientSessionManager = new ClientSessionManager();
 let centerManager: CenterSessionManager = new CenterSessionManager();
 // TODO: Add support for encodings
 // TODO: Fix reading and writing processors
 // TODO: Try creating multiple entries with the same arg
-// let wss: WSServer = new WSServer([clientManager, centerManager]);
+let wss: WSServer = new WSServer([clientManager, centerManager]);
 // let httpServer: HttpServer = new HttpServer(clientManager, centerManager);
 
 function cleanup(): void {
@@ -38,6 +41,10 @@ async function main() {
 }
 
 // main();
+console.log(ProcessorManager);
+// console.log(ProcessorManager.getProcessorsForType(Center.name));
+// console.log(ProcessorManager.processors);
+console.log("OK");
 
 // process.on('exit', cleanup);
 // process.on('SIGINT', cleanup);

@@ -1,3 +1,5 @@
+import Center from "../Center/Center";
+import Client from "../Client/Client";
 import Logger from "../Logger";
 import SmppSession from "../SmppSession";
 import PduProcessor from "./PduProcessor";
@@ -8,18 +10,22 @@ import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnu
 import SourceEnumeratorProcessor from "./Preprocessor/Client/SourceEnumeratorProcessor";
 
 export default class ProcessorManager {
-	static readonly preprocessors: PduProcessor[] = [
-		new DestinationEnumeratorProcessor(),
-		new SourceEnumeratorProcessor()
-	];
-	static readonly postprocessors: PduProcessor[] = [
-		new DebugPduProcessor(),
-		new EchoPduProcessor(),
-		new DeliverSmReplyProcessor(),
-	];
+	static preprocessors: PduProcessor[];
+	static postprocessors: PduProcessor[];
 	private static readonly logger: Logger = new Logger(this.name);
 
 	constructor() {
+		// This is an IDIOTIC solution, but it works
+		// Try running eb22a43 to find out what's wrong with the previous approach
+		ProcessorManager.preprocessors = [
+			new DestinationEnumeratorProcessor(Client.name),
+			new SourceEnumeratorProcessor(Client.name)
+		];
+		ProcessorManager.postprocessors = [
+			new DebugPduProcessor(Center.name),
+			new EchoPduProcessor(Center.name),
+			new DeliverSmReplyProcessor(Center.name),
+		];
 	}
 
 	static get processors(): PduProcessor[] {

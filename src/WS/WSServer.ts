@@ -6,7 +6,7 @@ const WebSocket = require("ws");
 
 const WS_SERVER_PORT: number = Number(process.env.WS_SERVER_PORT) || 8191;
 
-export class WSServer {
+export default class WSServer {
 	private readonly clients: ClientSet[];
 	private readonly unknownClients: any[];
 	private readonly server: any;
