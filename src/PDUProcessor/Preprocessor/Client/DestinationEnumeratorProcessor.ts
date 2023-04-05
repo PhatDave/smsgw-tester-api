@@ -3,6 +3,7 @@ import Preprocessor from "../Preprocessor";
 
 export default class DestinationEnumeratorProcessor extends Preprocessor {
 	private iterator: number = 0;
+
 	constructor(type: string) {
 		super(type);
 	}

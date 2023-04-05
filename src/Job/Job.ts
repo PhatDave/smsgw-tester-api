@@ -14,15 +14,6 @@ export default class Job {
 		this._count = count;
 	}
 
-	static pduParseShortMessage(pdu: PDU) {
-		if (pdu.short_message && pdu.short_message.type === "Buffer") {
-			pdu.short_message = Buffer.from(pdu.short_message.data, 'ascii').toString();
-		}
-		if (typeof pdu.short_message === "object") {
-			pdu.short_message = pdu.short_message.toString();
-		}
-	}
-
 	private _pdu: PDU;
 
 	get pdu(): PDU {
@@ -54,6 +45,15 @@ export default class Job {
 	set count(value: number) {
 		this._count = value;
 		this.eventEmitter.emit(Job.STATE_CHANGED, {});
+	}
+
+	static pduParseShortMessage(pdu: PDU) {
+		if (pdu.short_message && pdu.short_message.type === "Buffer") {
+			pdu.short_message = Buffer.from(pdu.short_message.data, 'ascii').toString();
+		}
+		if (typeof pdu.short_message === "object") {
+			pdu.short_message = pdu.short_message.toString();
+		}
 	}
 
 	static createEmptySingle(command: string): Job {

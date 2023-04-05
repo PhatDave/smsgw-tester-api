@@ -36,6 +36,10 @@ export default abstract class SmppSession {
 		this.processors[Postprocessor.name] = [];
 	}
 
+	get appliedProcessors(): PduProcessor[] {
+		return this.processors[Preprocessor.name].concat(this.processors[Postprocessor.name]);
+	}
+
 	abstract _username: string;
 
 	get username(): string {

@@ -24,7 +24,7 @@ export default class CenterRequestHandler extends RequestHandler {
 
 	doGetAppliedProcessors(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			let processors: PduProcessor[] = session.pduProcessors;
+			let processors: PduProcessor[] = session.appliedProcessors;
 			res.send(processors.map((processor: any) => processor.serialize()));
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}

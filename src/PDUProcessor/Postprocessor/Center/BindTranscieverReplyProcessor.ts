@@ -1,5 +1,4 @@
 import Center from "../../../Center/Center";
-import SmppSession from "../../../SmppSession";
 import Postprocessor from "../Postprocessor";
 
 const smpp = require("smpp");
