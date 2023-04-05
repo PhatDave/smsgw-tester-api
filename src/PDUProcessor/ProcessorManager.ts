@@ -5,10 +5,12 @@ import SmppSession from "../SmppSession";
 import PduProcessor from "./PduProcessor";
 import BindTranscieverReplyProcessor from "./Postprocessor/Center/BindTranscieverReplyProcessor";
 import DebugPduProcessor from "./Postprocessor/Center/DebugPduProcessor";
+import DeliveryReceiptProcessor from "./Postprocessor/Center/DeliveryReceiptProcessor";
 import EchoPduProcessor from "./Postprocessor/Center/EchoPduProcessor";
 import SubmitSmReplyProcessor from "./Postprocessor/Center/SubmitSmReplyProcessor";
 import DeliverSmReplyProcessor from "./Postprocessor/Client/DeliverSmReplyProcessor";
 import Postprocessor from "./Postprocessor/Postprocessor";
+import DeliveryReceiptRequestProcessor from "./Preprocessor/Client/DeliveryReceiptRequestProcessor";
 import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnumeratorProcessor";
 import SourceEnumeratorProcessor from "./Preprocessor/Client/SourceEnumeratorProcessor";
 import Preprocessor from "./Preprocessor/Preprocessor";
@@ -21,16 +23,18 @@ export default class ProcessorManager {
 	constructor() {
 		// This is an IDIOTIC solution, but it works
 		// Try running eb22a43 to find out what's wrong with the previous approach
-		ProcessorManager.preprocessors = [
-			new DestinationEnumeratorProcessor(Client.name),
-			new SourceEnumeratorProcessor(Client.name)
-		];
 		ProcessorManager.postprocessors = [
 			new DebugPduProcessor(Center.name),
 			new EchoPduProcessor(Center.name),
 			new DeliverSmReplyProcessor(Client.name),
 			new SubmitSmReplyProcessor(Center.name),
-			new BindTranscieverReplyProcessor(Center.name)
+			new BindTranscieverReplyProcessor(Center.name),
+			new DeliveryReceiptProcessor(Center.name)
+		];
+		ProcessorManager.preprocessors = [
+			new DestinationEnumeratorProcessor(Client.name),
+			new SourceEnumeratorProcessor(Client.name),
+			new DeliveryReceiptRequestProcessor(Client.name)
 		];
 	}
 
