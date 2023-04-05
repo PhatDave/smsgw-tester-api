@@ -1,4 +1,5 @@
 import EventEmitter from "events";
+import {PDU} from "./CommonObjects";
 import Job from "./Job/Job";
 import Logger from "./Logger";
 import PduProcessor from "./PDUProcessor/PduProcessor";
@@ -177,7 +178,15 @@ export default abstract class SmppSession {
 	detachPostprocessor(processor: PduProcessor): void {
 		this.detachProcessor(processor, this.processors.Postprocessor);
 	}
-	abstract eventAnyPdu(session: any, pdu: any): Promise<any>;
+
+	eventAnyPdu(session: any, pdu: PDU): Promise<any> {
+		if (!!pdu) {
+			this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
+			this.logger.log6(pdu);
+			this.processors.Postprocessor.forEach((processor: PduProcessor) => processor.processPdu(session, pdu, this));
+		}
+		return Promise.resolve();
+	}
 
 	private detachProcessor(processor: PduProcessor, array: PduProcessor[]): void {
 		array.splice(array.indexOf(processor), 1);

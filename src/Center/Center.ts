@@ -2,6 +2,8 @@ import {PDU} from "../CommonObjects";
 import Job from "../Job/Job";
 import Logger from "../Logger";
 import PduProcessor from "../PDUProcessor/PduProcessor";
+import BindTranscieverReplyProcessor from "../PDUProcessor/Postprocessor/Center/BindTranscieverReplyProcessor";
+import SubmitSmReplyProcessor from "../PDUProcessor/Postprocessor/Center/SubmitSmReplyProcessor";
 import ProcessorManager from "../PDUProcessor/ProcessorManager";
 import SmppSession from "../SmppSession";
 
@@ -21,10 +23,9 @@ export default class Center extends SmppSession {
 	_status: string = this.STATUSES[0];
 	port: number;
 
-	pduProcessors: PduProcessor[] = [];
 	readonly logger: Logger;
-	private pendingSessions: any[] = [];
-	private sessions: any[] = [];
+	pendingSessions: any[] = [];
+	sessions: any[] = [];
 	private nextSession: number = 0;
 	private server: any;
 
@@ -37,6 +38,9 @@ export default class Center extends SmppSession {
 
 		this._defaultSingleJob = Job.createEmptySingle('deliver_sm');
 		this._defaultMultipleJob = Job.createEmptyMultiple('deliver_sm');
+
+		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(SubmitSmReplyProcessor.name));
+		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(BindTranscieverReplyProcessor.name));
 
 		this.logger = new Logger(`Center-${id}`);
 
@@ -150,6 +154,16 @@ export default class Center extends SmppSession {
 		};
 	}
 
+	updateStatus(): void {
+		if (this.sessions.length > 0) {
+			this.setStatus(2);
+		} else if (this.pendingSessions.length > 0) {
+			this.setStatus(1);
+		} else {
+			this.setStatus(0);
+		}
+	}
+
 	private validateSessions(reject: (reason?: any) => void) {
 		if (this.sessions.length === 0) {
 			reject(`No clients connected`);
@@ -165,38 +179,11 @@ export default class Center extends SmppSession {
 		return session;
 	}
 
-	// TODO: Move this to smppSession and call postProcessors
-	private eventBindTransceiver(session: any, pdu: PDU) {
-		this.logger.log1(`Center-${this.id} got a bind_transciever with system_id ${pdu.system_id} and password ${pdu.password}`);
-		session.pause();
-		if (pdu.system_id === this.username && pdu.password === this.password) {
-			this.logger.log1(`Center-${this.id} client connection successful`);
-			if (pdu.response) {
-				session.send(pdu.response());
-			}
-			session.resume();
-			this.pendingSessions = this.pendingSessions.filter((s) => s !== session);
-			this.sessions.push(session);
-			this.updateStatus();
-		} else {
-			this.logger.log1(`Center-${this.id} client connection failed, invalid credentials (expected: ${this.username}, ${this.password})`);
-			if (pdu.response) {
-				session.send(pdu.response({
-					command_status: smpp.ESME_RBINDFAIL
-				}));
-			}
-			this.pendingSessions = this.pendingSessions.filter((s) => s !== session);
-			this.updateStatus();
-			session.close();
-		}
-	}
-
 	private eventSessionConnected(session: any): void {
 		this.logger.log1(`A client connected to center-${this.id}`);
 		this.pendingSessions.push(session);
 		session.on('close', this.eventSessionClose.bind(this, session));
 		session.on('error', this.eventSessionError.bind(this, session));
-		session.on('bind_transceiver', this.eventBindTransceiver.bind(this, session));
 		session.on('pdu', this.eventAnyPdu.bind(this, session));
 		this.updateStatus();
 		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
@@ -212,32 +199,5 @@ export default class Center extends SmppSession {
 		this.nextSession = 0;
 		this.pendingSessions = this.pendingSessions.filter((s: any) => s !== session);
 		this.updateStatus();
-	}
-
-	private updateStatus(): void {
-		if (this.sessions.length > 0) {
-			this.setStatus(2);
-		} else if (this.pendingSessions.length > 0) {
-			this.setStatus(1);
-		} else {
-			this.setStatus(0);
-		}
-	}
-
-	// TODO: Move this to smppSession and call postProcessors
-	eventAnyPdu(session: any, pdu: any): Promise<any> {
-		this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
-		let successful: number = 0;
-		this.pduProcessors.forEach((pduProcessor: PduProcessor) => {
-			pduProcessor.processPdu(session, pdu).then((result: any) => {
-				successful++;
-			}, (error: any) => {
-			});
-		});
-		if (successful === 0) {
-			return Promise.resolve("No PDU processor was able to process the PDU");
-		} else {
-			return Promise.resolve();
-		}
 	}
 }

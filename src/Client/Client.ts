@@ -2,6 +2,7 @@ import {PDU} from "../CommonObjects";
 import Job from "../Job/Job";
 import Logger from "../Logger";
 import PduProcessor from "../PDUProcessor/PduProcessor";
+import DeliverSmReplyProcessor from "../PDUProcessor/Postprocessor/Client/DeliverSmReplyProcessor";
 import ProcessorManager from "../PDUProcessor/ProcessorManager";
 import PersistentPromise from "../PersistentPromise";
 import SmppSession from "../SmppSession";
@@ -41,6 +42,8 @@ export default class Client extends SmppSession {
 
 		this._defaultSingleJob = Job.createEmptySingle('submit_sm');
 		this._defaultMultipleJob = Job.createEmptyMultiple('submit_sm');
+
+		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(DeliverSmReplyProcessor.name));
 
 		this.logger = new Logger(`Client-${id}`);
 	}
@@ -182,12 +185,6 @@ export default class Client extends SmppSession {
 			}, '', `${interval} s`);
 			resolve();
 		});
-	}
-
-	// TODO: Move this to smppSession and call postProcessors
-	eventAnyPdu(session: any, pdu: any): Promise<any> {
-		this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
-		return Promise.resolve();
 	}
 
 	private connectSession(): Promise<void> {

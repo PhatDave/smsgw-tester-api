@@ -3,8 +3,10 @@ import Client from "../Client/Client";
 import Logger from "../Logger";
 import SmppSession from "../SmppSession";
 import PduProcessor from "./PduProcessor";
+import BindTranscieverReplyProcessor from "./Postprocessor/Center/BindTranscieverReplyProcessor";
 import DebugPduProcessor from "./Postprocessor/Center/DebugPduProcessor";
 import EchoPduProcessor from "./Postprocessor/Center/EchoPduProcessor";
+import SubmitSmReplyProcessor from "./Postprocessor/Center/SubmitSmReplyProcessor";
 import DeliverSmReplyProcessor from "./Postprocessor/Client/DeliverSmReplyProcessor";
 import Postprocessor from "./Postprocessor/Postprocessor";
 import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnumeratorProcessor";
@@ -26,7 +28,9 @@ export default class ProcessorManager {
 		ProcessorManager.postprocessors = [
 			new DebugPduProcessor(Center.name),
 			new EchoPduProcessor(Center.name),
-			new DeliverSmReplyProcessor(Center.name),
+			new DeliverSmReplyProcessor(Client.name),
+			new SubmitSmReplyProcessor(Center.name),
+			new BindTranscieverReplyProcessor(Center.name)
 		];
 	}
 

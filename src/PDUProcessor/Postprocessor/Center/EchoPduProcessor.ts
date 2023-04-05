@@ -1,4 +1,4 @@
-import {PDU} from "../../../CommonObjects";
+import SmppSession from "../../../SmppSession";
 import Postprocessor from "../Postprocessor";
 
 const smpp = require("smpp");
@@ -8,7 +8,7 @@ export default class EchoPduProcessor extends Postprocessor {
 		super(type);
 	}
 
-	processPdu(session: any, pdu: PDU, ...args: any[]): Promise<any> {
+	processPdu(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
 			let promises = [];
 			if (pdu.response) {

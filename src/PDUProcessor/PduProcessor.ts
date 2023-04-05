@@ -1,5 +1,5 @@
-import {PDU} from "../CommonObjects";
 import Logger from "../Logger";
+import SmppSession from "../SmppSession";
 
 export default abstract class PduProcessor {
 	readonly abstract type: string
@@ -11,7 +11,7 @@ export default abstract class PduProcessor {
 		this.sessionType = type;
 	}
 
-	abstract processPdu(session: any, pdu: PDU, ...args: any[]): Promise<any>;
+	abstract processPdu(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any>;
 
 	serialize(): object {
 		return {

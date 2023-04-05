@@ -14,9 +14,6 @@ let logger = new Logger("main");
 new ProcessorManager();
 let clientManager: ClientSessionManager = new ClientSessionManager();
 let centerManager: CenterSessionManager = new CenterSessionManager();
-// TODO: Add support for encodings
-// TODO: Fix reading and writing processors
-// TODO: Try creating multiple entries with the same arg
 let wss: WSServer = new WSServer([clientManager, centerManager]);
 
 // let httpServer: HttpServer = new HttpServer(clientManager, centerManager);
@@ -42,8 +39,11 @@ async function main() {
 	// }, 3000);
 
 
-	console.log(ProcessorManager.getProcessorsForType(Client.name));
-	ProcessorManager.attachProcessor(client, ProcessorManager.getProcessor(SourceEnumeratorProcessor.name));
+	// console.log(ProcessorManager.getProcessorsForType(Client.name));
+	// ProcessorManager.attachProcessor(client, ProcessorManager.getProcessor(SourceEnumeratorProcessor.name));
+	await client.doConnect();
+	await client.doBind();
+	client.sendMultipleDefault();
 	console.log("OK");
 }
 

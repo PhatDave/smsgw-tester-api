@@ -1,4 +1,4 @@
-import {PDU} from "../../../CommonObjects";
+import SmppSession from "../../../SmppSession";
 import Preprocessor from "../Preprocessor";
 
 export default class DestinationEnumeratorProcessor extends Preprocessor {
@@ -7,7 +7,7 @@ export default class DestinationEnumeratorProcessor extends Preprocessor {
 		super(type);
 	}
 
-	processPdu(session: any, pdu: PDU, ...args: any[]): Promise<any> {
+	processPdu(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
 			if (!!pdu.destination_addr) {
 				pdu.destination_addr = pdu.destination_addr + this.padLeft(String(this.iterator++), '0', 5);
