@@ -1,6 +1,4 @@
-import Center from "../../../Center/Center";
 import {PDU} from "../../../CommonObjects";
-import SmppSession from "../../../SmppSession";
 import Postprocessor from "../Postprocessor";
 
 const smpp = require("smpp");
@@ -8,7 +6,6 @@ const smpp = require("smpp");
 export default class EchoPduProcessor extends Postprocessor {
 	constructor(type: string) {
 		super(type);
-		console.log(this.serverSessionType);
 	}
 
 	processPdu(session: any, pdu: PDU, ...args: any[]): Promise<any> {

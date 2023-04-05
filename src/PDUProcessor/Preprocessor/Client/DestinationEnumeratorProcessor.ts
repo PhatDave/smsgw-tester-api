@@ -1,13 +1,10 @@
-import Client from "../../../Client/Client";
 import {PDU} from "../../../CommonObjects";
-import SmppSession from "../../../SmppSession";
 import Preprocessor from "../Preprocessor";
 
 export default class DestinationEnumeratorProcessor extends Preprocessor {
 	private iterator: number = 0;
 	constructor(type: string) {
 		super(type);
-		console.log(this.serverSessionType);
 	}
 
 	processPdu(session: any, pdu: PDU, ...args: any[]): Promise<any> {

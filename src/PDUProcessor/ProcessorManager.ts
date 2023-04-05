@@ -58,10 +58,10 @@ export default class ProcessorManager {
 
 	static areCompatible(session: SmppSession, processor: PduProcessor): boolean {
 		this.logger.log1(`Checking compatibility between session ${session.constructor.name}-${session.id} and processor ${processor.name}`);
-		return session.constructor.name === processor.serverSessionType;
+		return session.constructor.name === processor.sessionType;
 	}
 
 	static getProcessorsForType(type: string): PduProcessor[] {
-		return this.processors.filter((processor: PduProcessor) => processor.serverSessionType === type);
+		return this.processors.filter((processor: PduProcessor) => processor.sessionType === type);
 	}
 }
