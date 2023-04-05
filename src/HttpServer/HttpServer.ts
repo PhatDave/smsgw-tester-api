@@ -11,7 +11,7 @@ const zlib = require("zlib");
 
 const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
 
-export class HttpServer {
+export default class HttpServer {
 	private readonly clientRequestHandler: RequestHandler;
 	private readonly centerRequestHandler: RequestHandler;
 

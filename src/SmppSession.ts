@@ -186,6 +186,7 @@ export default abstract class SmppSession {
 	eventAnyPdu(session: any, pdu: PDU): Promise<any> {
 		if (!!pdu) {
 			this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
+			// console.log("IS PDU TIME");
 			this.logger.log6(pdu);
 			this.processors.Postprocessor.forEach((processor: PduProcessor) => processor.processPdu(session, pdu, this));
 		}

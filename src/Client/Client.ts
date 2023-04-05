@@ -26,7 +26,6 @@ export default class Client extends SmppSession {
 	_password: string;
 	_id: number;
 	_status: string = this.STATUSES[0];
-	pduProcessors: PduProcessor[] = [];
 	readonly logger: Logger;
 	private session?: any;
 	private connectPromise: PersistentPromise | null = null;
@@ -197,7 +196,7 @@ export default class Client extends SmppSession {
 			}, this.eventSessionConnected.bind(this));
 			this.session.on('error', this.eventSessionError.bind(this));
 			this.session.on('close', this.eventSessionClose.bind(this));
-			this.session.on('pdu', this.eventAnyPdu.bind(this));
+			this.session.on('pdu', this.eventAnyPdu.bind(this, this.session));
 		});
 	}
 

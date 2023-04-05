@@ -10,8 +10,8 @@ export default class EchoPduProcessor extends Postprocessor {
 
 	processPdu(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
-			let promises = [];
-			if (pdu.response) {
+			if (!!pdu.command && pdu.command === "submit_sm") {
+				let promises = [];
 				let replyPromise = session.send(pdu.response());
 				let sendPromise = session.send(new smpp.PDU('deliver_sm', {
 					source_addr: pdu.destination_addr,
@@ -20,12 +20,12 @@ export default class EchoPduProcessor extends Postprocessor {
 				}));
 				promises.push(replyPromise);
 				promises.push(sendPromise);
+				Promise.all(promises).then((replyPdus: any) => {
+					resolve(replyPdus);
+				}).catch((error: any) => {
+					reject(error);
+				});
 			}
-			Promise.all(promises).then((replyPdus: any) => {
-				resolve(replyPdus);
-			}).catch((error: any) => {
-				reject(error);
-			});
 		});
 	}
 }

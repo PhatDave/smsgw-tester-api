@@ -3,6 +3,7 @@ import Job from "../Job/Job";
 import Logger from "../Logger";
 import PduProcessor from "../PDUProcessor/PduProcessor";
 import BindTranscieverReplyProcessor from "../PDUProcessor/Postprocessor/Center/BindTranscieverReplyProcessor";
+import DebugPduProcessor from "../PDUProcessor/Postprocessor/Center/DebugPduProcessor";
 import SubmitSmReplyProcessor from "../PDUProcessor/Postprocessor/Center/SubmitSmReplyProcessor";
 import ProcessorManager from "../PDUProcessor/ProcessorManager";
 import SmppSession from "../SmppSession";
@@ -41,6 +42,7 @@ export default class Center extends SmppSession {
 
 		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(SubmitSmReplyProcessor.name));
 		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(BindTranscieverReplyProcessor.name));
+		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(DebugPduProcessor.name));
 
 		this.logger = new Logger(`Center-${id}`);
 

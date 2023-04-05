@@ -1,6 +1,7 @@
 import CenterSessionManager from "./Center/CenterSessionManager";
 import Client from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
+import HttpServer from "./HttpServer/HttpServer";
 import Logger from "./Logger";
 import ProcessorManager from "./PDUProcessor/ProcessorManager";
 import WSServer from "./WS/WSServer";
@@ -12,9 +13,9 @@ let logger = new Logger("main");
 new ProcessorManager();
 let clientManager: ClientSessionManager = new ClientSessionManager();
 let centerManager: CenterSessionManager = new CenterSessionManager();
-let wss: WSServer = new WSServer([clientManager, centerManager]);
 
-// let httpServer: HttpServer = new HttpServer(clientManager, centerManager);
+let wss: WSServer = new WSServer([clientManager, centerManager]);
+let httpServer: HttpServer = new HttpServer(clientManager, centerManager);
 
 function cleanup(): void {
 	logger.log1("Cleaning up...");
@@ -39,9 +40,9 @@ async function main() {
 
 	// console.log(ProcessorManager.getProcessorsForType(Client.name));
 	// ProcessorManager.attachProcessor(client, ProcessorManager.getProcessor(SourceEnumeratorProcessor.name));
-	await client.doConnect();
-	await client.doBind();
-	client.sendMultipleDefault();
+	// await client.doConnect();
+	// await client.doBind();
+	// client.sendMultipleDefault();
 	console.log("OK");
 }
 
