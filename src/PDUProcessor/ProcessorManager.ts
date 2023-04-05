@@ -4,9 +4,9 @@ import Logger from "../Logger";
 import SmppSession from "../SmppSession";
 import PduProcessor from "./PduProcessor";
 import BindTranscieverReplyProcessor from "./Postprocessor/Center/BindTranscieverReplyProcessor";
-import DebugPduProcessor from "./Postprocessor/Center/DebugPduProcessor";
 import DeliveryReceiptProcessor from "./Postprocessor/Center/DeliveryReceiptProcessor";
 import EchoPduProcessor from "./Postprocessor/Center/EchoPduProcessor";
+import EnquireLinkReplyProcessor from "./Postprocessor/Center/EnquireLinkReplyProcessor";
 import SubmitSmReplyProcessor from "./Postprocessor/Center/SubmitSmReplyProcessor";
 import DeliverSmReplyProcessor from "./Postprocessor/Client/DeliverSmReplyProcessor";
 import Postprocessor from "./Postprocessor/Postprocessor";
@@ -24,7 +24,7 @@ export default class ProcessorManager {
 		// This is an IDIOTIC solution, but it works
 		// Try running eb22a43 to find out what's wrong with the previous approach
 		ProcessorManager.postprocessors = [
-			new DebugPduProcessor(Center.name),
+			new EnquireLinkReplyProcessor(Center.name),
 			new EchoPduProcessor(Center.name),
 			new DeliverSmReplyProcessor(Client.name),
 			new SubmitSmReplyProcessor(Center.name),
