@@ -1,15 +1,14 @@
 import {PDU} from "../CommonObjects";
-import {Job} from "../Job/Job";
+import Job from "../Job/Job";
 import Logger from "../Logger";
-import {PduProcessor} from "../PDUProcessor/PduProcessor";
-import {DebugPduProcessor} from "../PDUProcessor/Postprocessor/Center/DebugPduProcessor";
+import PduProcessor from "../PDUProcessor/PduProcessor";
 import ProcessorManager from "../PDUProcessor/ProcessorManager";
-import {SmppSession} from "../SmppSession";
+import SmppSession from "../SmppSession";
 
 const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
 
-export class Center extends SmppSession {
+export default class Center extends SmppSession {
 	readonly STATUSES: string[] = [
 		"WAITING CONNECTION",
 		"CONNECTING",

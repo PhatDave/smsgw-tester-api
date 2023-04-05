@@ -1,20 +1,20 @@
 import EventEmitter from "events";
 import fs from "fs";
-import {Job} from "./Job/Job";
+import Job from "./Job/Job";
 import Logger from "./Logger";
-import {SmppSession} from "./SmppSession";
+import SmppSession from "./SmppSession";
 
-export abstract class SessionManager {
+export default abstract class SessionManager {
 	// I could've done this by passing these abstract properties to the constructor, but I wanted to have the possibility
 	// of implementing additional methods
-	abstract sessions: SmppSession[];
-	abstract sessionId: number;
 	abstract comparatorFn: (arg: any, session: SmppSession) => boolean;
 	readonly abstract identifier: string;
 	readonly abstract ManagedSessionClass: any;
 	readonly abstract StorageFile: string;
-
 	readonly SESSION_ADDED_EVENT: string = "SESSION ADDED";
+
+	sessions: SmppSession[] = [];
+	sessionId: number = 0;
 	readonly logger: Logger = new Logger("SessionManager");
 	readonly eventEmitter: EventEmitter = new EventEmitter();
 

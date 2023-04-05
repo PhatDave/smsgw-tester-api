@@ -1,11 +1,11 @@
 import Logger from "../Logger";
-import {SmppSession} from "../SmppSession";
-import {PduProcessor} from "./PduProcessor";
-import {DebugPduProcessor} from "./Postprocessor/Center/DebugPduProcessor";
-import {EchoPduProcessor} from "./Postprocessor/Center/EchoPduProcessor";
-import {DeliverSmReplyProcessor} from "./Postprocessor/Client/DeliverSmReplyProcessor";
-import {DestinationEnumeratorProcessor} from "./Preprocessor/Client/DestinationEnumeratorProcessor";
-import {SourceEnumeratorProcessor} from "./Preprocessor/Client/SourceEnumeratorProcessor";
+import SmppSession from "../SmppSession";
+import PduProcessor from "./PduProcessor";
+import DebugPduProcessor from "./Postprocessor/Center/DebugPduProcessor";
+import EchoPduProcessor from "./Postprocessor/Center/EchoPduProcessor";
+import DeliverSmReplyProcessor from "./Postprocessor/Client/DeliverSmReplyProcessor";
+import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnumeratorProcessor";
+import SourceEnumeratorProcessor from "./Preprocessor/Client/SourceEnumeratorProcessor";
 
 export default class ProcessorManager {
 	static readonly preprocessors: PduProcessor[] = [

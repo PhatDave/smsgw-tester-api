@@ -1,8 +1,8 @@
 import Logger from "../Logger";
-import {SessionManager} from "../SessionManager";
-import {CenterRequestHandler} from "./CenterRequestHandler";
+import SessionManager from "../SessionManager";
+import CenterRequestHandler from "./CenterRequestHandler";
 import ClientRequestHandler from "./ClientRequestHandler";
-import {RequestHandler} from "./RequestHandler";
+import RequestHandler from "./RequestHandler";
 
 const express = require("express");
 const bodyParser = require("body-parser");

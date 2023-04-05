@@ -1,18 +1,17 @@
 import {PDU} from "../CommonObjects";
-import {Job} from "../Job/Job";
+import Job from "../Job/Job";
 import Logger from "../Logger";
-import {PduProcessor} from "../PDUProcessor/PduProcessor";
-import {DeliverSmReplyProcessor} from "../PDUProcessor/Postprocessor/Client/DeliverSmReplyProcessor";
+import PduProcessor from "../PDUProcessor/PduProcessor";
 import ProcessorManager from "../PDUProcessor/ProcessorManager";
 import PersistentPromise from "../PersistentPromise";
-import {SmppSession} from "../SmppSession";
+import SmppSession from "../SmppSession";
 
 const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
 
 const AUTO_ENQUIRE_LINK_PERIOD: number = Number(process.env.AUTO_ENQUIRE_LINK_PERIOD) || 30000;
 
-export class Client extends SmppSession {
+export default class Client extends SmppSession {
 	readonly STATUSES: string[] = [
 		"NOT CONNECTED",
 		"CONNECTING",

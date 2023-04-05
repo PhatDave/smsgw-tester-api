@@ -1,9 +1,9 @@
 import Logger from "../Logger";
-import {SessionManager} from "../SessionManager";
-import {SmppSession} from "../SmppSession";
+import SessionManager from "../SessionManager";
+import SmppSession from "../SmppSession";
 import ZlibCoder from "../ZlibCoder";
 
-export class ClientSet {
+export default class ClientSet {
 	identifier: string;
 	private clients: any[];
 	private readonly type: string;

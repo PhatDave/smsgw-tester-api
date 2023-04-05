@@ -1,6 +1,6 @@
 import Logger from "../Logger";
-import {SessionManager} from "../SessionManager";
-import {ClientSet} from "./ClientSet";
+import SessionManager from "../SessionManager";
+import ClientSet from "./ClientSet";
 
 const WebSocket = require("ws");
 

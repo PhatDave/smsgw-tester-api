@@ -1,7 +1,7 @@
 import {PDU} from "../CommonObjects";
 import Logger from "../Logger";
 
-export abstract class PduProcessor {
+export default abstract class PduProcessor {
 	abstract readonly serverSessionType: string;
 	readonly name: string = this.constructor.name;
 	readonly logger: Logger = new Logger(`PduProcessor: ${this.name}`);

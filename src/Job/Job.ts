@@ -4,7 +4,7 @@ import {PDU, SerializedJob} from "../CommonObjects";
 const smpp = require("smpp");
 // TODO: Use pdu.data_coding for data coding
 // See available schemes here https://messaggio.com/industry-specifications-and-standards/smpp-data-coding-scheme/
-export class Job {
+export default class Job {
 	static readonly STATE_CHANGED: string = "STATE_CHANGED";
 	private eventEmitter: EventEmitter = new EventEmitter();
 

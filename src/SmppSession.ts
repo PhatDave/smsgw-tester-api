@@ -1,12 +1,12 @@
 import EventEmitter from "events";
-import {Job} from "./Job/Job";
+import Job from "./Job/Job";
 import Logger from "./Logger";
-import {PduProcessor} from "./PDUProcessor/PduProcessor";
+import PduProcessor from "./PDUProcessor/PduProcessor";
 
 const NanoTimer = require("nanotimer");
 const smpp = require("smpp");
 
-export abstract class SmppSession {
+export default abstract class SmppSession {
 	readonly EVENT: any = {
 		STATUS_CHANGED: "STATUS_CHANGED",
 		STATE_CHANGED: "STATE_CHANGED",

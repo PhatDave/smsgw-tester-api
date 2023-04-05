@@ -1,16 +1,8 @@
-import {Center} from "./Center/Center";
-import {CenterSessionManager} from "./Center/CenterSessionManager";
-import {Client} from "./Client/Client";
+import Center from "./Center/Center";
+import CenterSessionManager from "./Center/CenterSessionManager";
+import Client from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
-import {HttpServer} from "./HttpServer/HttpServer";
 import Logger from "./Logger";
-import {PduProcessor} from "./PDUProcessor/PduProcessor";
-import {DebugPduProcessor} from "./PDUProcessor/Postprocessor/Center/DebugPduProcessor";
-import {EchoPduProcessor} from "./PDUProcessor/Postprocessor/Center/EchoPduProcessor";
-import {DeliverSmReplyProcessor} from "./PDUProcessor/Postprocessor/Client/DeliverSmReplyProcessor";
-import {DestinationEnumeratorProcessor} from "./PDUProcessor/Preprocessor/Client/DestinationEnumeratorProcessor";
-import {SourceEnumeratorProcessor} from "./PDUProcessor/Preprocessor/Client/SourceEnumeratorProcessor";
-import {WSServer} from "./WS/WSServer";
 
 const {PDU} = require("smpp");
 
@@ -47,7 +39,7 @@ async function main() {
 
 // main();
 
-process.on('exit', cleanup);
-process.on('SIGINT', cleanup);
-process.on('SIGUSR1', cleanup);
-process.on('SIGUSR2', cleanup);
+// process.on('exit', cleanup);
+// process.on('SIGINT', cleanup);
+// process.on('SIGUSR1', cleanup);
+// process.on('SIGUSR2', cleanup);

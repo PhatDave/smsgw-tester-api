@@ -1,10 +1,11 @@
-import {Client} from "../Client/Client";
+import Client from "../Client/Client";
 import ClientSessionManager from "../Client/ClientSessionManager";
 import Logger from "../Logger";
-import {PduProcessor} from "../PDUProcessor/PduProcessor";
-import {SessionManager} from "../SessionManager";
-import {SmppSession} from "../SmppSession";
-import {RequestHandler} from "./RequestHandler";
+import PduProcessor from "../PDUProcessor/PduProcessor";
+import ProcessorManager from "../PDUProcessor/ProcessorManager";
+import SessionManager from "../SessionManager";
+import SmppSession from "../SmppSession";
+import RequestHandler from "./RequestHandler";
 
 export default class ClientRequestHandler extends RequestHandler {
 	sessionManager: ClientSessionManager;
@@ -17,7 +18,7 @@ export default class ClientRequestHandler extends RequestHandler {
 
 	doGetAvailableProcessors(req: any, res: any): void {
 		this.logger.log1("Getting available processors");
-		let processors: PduProcessor[] = PduProcessor.getProcessorsForType(Client.name);
+		let processors: PduProcessor[] = ProcessorManager.getProcessorsForType(Client.name);
 		res.send(processors.map((processor: any) => processor.serialize()));
 	}
 
@@ -30,16 +31,16 @@ export default class ClientRequestHandler extends RequestHandler {
 
 	doAddProcessor(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			let processor: PduProcessor = PduProcessor.getProcessor(req.body.name);
-			PduProcessor.attachProcessor(session, processor);
+			let processor: PduProcessor = ProcessorManager.getProcessor(req.body.name);
+			ProcessorManager.attachProcessor(session, processor);
 			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}
 
 	doRemoveProcessor(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			let processor: PduProcessor = PduProcessor.getProcessor(req.body.name);
-			PduProcessor.detachProcessor(session, processor);
+			let processor: PduProcessor = ProcessorManager.getProcessor(req.body.name);
+			ProcessorManager.detachProcessor(session, processor);
 			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}

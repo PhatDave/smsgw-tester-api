@@ -1,9 +1,9 @@
-import {Job} from "../Job/Job";
+import Job from "../Job/Job";
 import Logger from "../Logger";
-import {SessionManager} from "../SessionManager";
-import {SmppSession} from "../SmppSession";
+import SessionManager from "../SessionManager";
+import SmppSession from "../SmppSession";
 
-export abstract class RequestHandler {
+export default abstract class RequestHandler {
 	abstract sessionManager: SessionManager;
 	logger: Logger = new Logger(this.constructor.name);
 
