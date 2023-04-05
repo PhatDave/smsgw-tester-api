@@ -112,6 +112,7 @@ export default class Client extends SmppSession {
 	}
 
 	serialize(): object {
+		// TODO: Generify this further by moving it to smpp session and creating a... "postSerialize" that is abstract
 		return {
 			id: this._id,
 			url: this.url,
@@ -120,8 +121,10 @@ export default class Client extends SmppSession {
 			status: this._status,
 			defaultSingleJob: this._defaultSingleJob.serialize(),
 			defaultMultipleJob: this._defaultMultipleJob.serialize(),
-			processors: this.pduProcessors.map(p => p.serialize()),
-			availableProcessors: ProcessorManager.getProcessorsForType(this.constructor.name)
+			preprocessors: this.processors.Preprocessor.map((p: PduProcessor) => p.serialize()),
+			postprocessors: this.processors.Postprocessor.map((p: PduProcessor) => p.serialize()),
+			availablePreprocessors: ProcessorManager.getPreprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
+			availablePostprocessors: ProcessorManager.getPostprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
 		};
 	}
 
@@ -130,14 +133,15 @@ export default class Client extends SmppSession {
 		return Promise.resolve(this.session.close());
 	}
 
-	sendPdu(pdu: any, force?: boolean): Promise<object> {
+	sendPdu(pdu: PDU, force?: boolean): Promise<object> {
 		return new Promise((resolve, reject) => {
 			if (!force) {
 				this.validateSession(reject);
 				this.validateBound(reject);
 			}
-			let pduCopy = new smpp.PDU(pdu.command, {...pdu})
-			this.pduProcessors.forEach((processor: PduProcessor) => processor.processPdu(this.session, pduCopy));
+			// Is this expensive...?
+			let pduCopy = new smpp.PDU(pdu.command, {...pdu});
+			this.processors.Preprocessor.forEach((processor: PduProcessor) => processor.processPdu(this.session, pduCopy));
 			this.logger.log5(`Client-${this.id} sending PDU: ${JSON.stringify(pduCopy)}`);
 			this.session.send(pduCopy, (replyPdu: object) => resolve(replyPdu));
 		});
@@ -171,13 +175,19 @@ export default class Client extends SmppSession {
 				if (count > 0 && counter >= count) {
 					this.cancelSendInterval();
 				} else {
-						this.sendPdu(job.pdu, true)
+					this.sendPdu(job.pdu, true)
 						.catch(e => this.logger.log1(`Error sending message: ${e}`));
 					counter++;
 				}
 			}, '', `${interval} s`);
 			resolve();
 		});
+	}
+
+	// TODO: Move this to smppSession and call postProcessors
+	eventAnyPdu(session: any, pdu: any): Promise<any> {
+		this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
+		return Promise.resolve();
 	}
 
 	private connectSession(): Promise<void> {
@@ -276,10 +286,5 @@ export default class Client extends SmppSession {
 			this.logger.log1(errorMessage);
 			reject(errorMessage);
 		}
-	}
-
-	eventAnyPdu(session: any, pdu: any): Promise<any> {
-		this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
-		return Promise.resolve();
 	}
 }

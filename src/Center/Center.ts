@@ -69,6 +69,21 @@ export default class Center extends SmppSession {
 		super.defaultMultipleJob = job;
 	}
 
+	sendPdu(pdu: PDU, force?: boolean): Promise<object> {
+		return new Promise((resolve, reject) => {
+			if (!force) {
+				this.validateSessions(reject);
+			}
+			this.logger.log5(`Center-${this.id} sending PDU: ${JSON.stringify(pdu)}`);
+			let pduCopy = new smpp.PDU(pdu.command, {...pdu});
+			let session = this.getNextSession();
+			this.processors.Preprocessor.forEach((processor: PduProcessor) => processor.processPdu(session, pduCopy));
+			session.send(pduCopy, (replyPdu: any) => {
+				resolve(replyPdu);
+			});
+		});
+	}
+
 	sendMultiple(job: Job): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.validateSessions(reject);
@@ -102,18 +117,6 @@ export default class Center extends SmppSession {
 		});
 	}
 
-	sendPdu(pdu: object, force?: boolean): Promise<object> {
-		return new Promise((resolve, reject) => {
-			if (!force) {
-				this.validateSessions(reject);
-			}
-			this.logger.log5(`Center-${this.id} sending PDU: ${JSON.stringify(pdu)}`);
-			this.getNextSession().send(pdu, (replyPdu: any) => {
-				resolve(replyPdu);
-			});
-		});
-	}
-
 	initialize(): void {
 		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
 		this.server.listen(this.port);
@@ -140,8 +143,10 @@ export default class Center extends SmppSession {
 			status: this._status,
 			defaultSingleJob: this._defaultSingleJob.serialize(),
 			defaultMultipleJob: this._defaultMultipleJob.serialize(),
-			processors: this.pduProcessors.map(p => p.serialize()),
-			availableProcessors: ProcessorManager.getProcessorsForType(this.constructor.name)
+			preprocessors: this.processors.Preprocessor.map((p: PduProcessor) => p.serialize()),
+			postprocessors: this.processors.Postprocessor.map((p: PduProcessor) => p.serialize()),
+			availablePreprocessors: ProcessorManager.getPreprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
+			availablePostprocessors: ProcessorManager.getPostprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
 		};
 	}
 
@@ -160,6 +165,7 @@ export default class Center extends SmppSession {
 		return session;
 	}
 
+	// TODO: Move this to smppSession and call postProcessors
 	private eventBindTransceiver(session: any, pdu: PDU) {
 		this.logger.log1(`Center-${this.id} got a bind_transciever with system_id ${pdu.system_id} and password ${pdu.password}`);
 		session.pause();
@@ -218,7 +224,7 @@ export default class Center extends SmppSession {
 		}
 	}
 
-	// No reaason for this to be a promise
+	// TODO: Move this to smppSession and call postProcessors
 	eventAnyPdu(session: any, pdu: any): Promise<any> {
 		this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
 		let successful: number = 0;

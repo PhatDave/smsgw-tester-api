@@ -87,4 +87,12 @@ export default class ProcessorManager {
 	static getProcessorsForType(type: string): PduProcessor[] {
 		return this.processors.filter((processor: PduProcessor) => processor.sessionType === type);
 	}
+
+	static getPreprocessorsForType(type: string): PduProcessor[] {
+		return this.preprocessors.filter((processor: PduProcessor) => processor.sessionType === type);
+	}
+
+	static getPostprocessorsForType(type: string): PduProcessor[] {
+		return this.postprocessors.filter((processor: PduProcessor) => processor.sessionType === type);
+	}
 }

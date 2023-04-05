@@ -177,14 +177,6 @@ export default abstract class SmppSession {
 	detachPostprocessor(processor: PduProcessor): void {
 		this.detachProcessor(processor, this.processors.Postprocessor);
 	}
-
-	serializePduProcessors(): object {
-		let processors: PduProcessor[] = this.processors.Preprocessor.concat(this.processors.Postprocessor);
-		return processors.map((processor: PduProcessor) => {
-			return processor.serialize();
-		});
-	}
-
 	abstract eventAnyPdu(session: any, pdu: any): Promise<any>;
 
 	private detachProcessor(processor: PduProcessor, array: PduProcessor[]): void {
