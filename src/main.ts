@@ -3,6 +3,7 @@ import Client from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import HttpServer from "./HttpServer/HttpServer";
 import Logger from "./Logger";
+import SourceEnumeratorProcessor from "./PDUProcessor/Preprocessor/Client/SourceEnumeratorProcessor";
 import ProcessorManager from "./PDUProcessor/ProcessorManager";
 import WSServer from "./WS/WSServer";
 
@@ -43,12 +44,13 @@ async function main() {
 	// await client.doConnect();
 	// await client.doBind();
 	// client.sendMultipleDefault();
+	ProcessorManager.attachProcessor(client, ProcessorManager.getProcessor(SourceEnumeratorProcessor.name));
 	console.log("OK");
 }
 
 main();
 
-// process.on('exit', cleanup);
-// process.on('SIGINT', cleanup);
-// process.on('SIGUSR1', cleanup);
-// process.on('SIGUSR2', cleanup);
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGUSR1', cleanup);
+process.on('SIGUSR2', cleanup);

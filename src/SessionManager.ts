@@ -2,6 +2,8 @@ import EventEmitter from "events";
 import fs from "fs";
 import Job from "./Job/Job";
 import Logger from "./Logger";
+import PduProcessor from "./PDUProcessor/PduProcessor";
+import ProcessorManager from "./PDUProcessor/ProcessorManager";
 import SmppSession from "./SmppSession";
 
 export default abstract class SessionManager {
@@ -67,6 +69,18 @@ export default abstract class SessionManager {
 				this.createSession(session.url || session.port, session.username, session.password).then((sessionObj: SmppSession) => {
 					sessionObj.defaultSingleJob = Job.deserialize(session.defaultSingleJob);
 					sessionObj.defaultMultipleJob = Job.deserialize(session.defaultMultipleJob);
+
+					let loadedProcessors: PduProcessor[] = session.preprocessors.concat(session.postprocessors);
+					sessionObj.appliedProcessors.forEach((processor: PduProcessor) => {
+						if (!loadedProcessors.find(p => p.name === processor.name)) {
+							ProcessorManager.detachProcessor(sessionObj, processor);
+						}
+					});
+					loadedProcessors.forEach((processor: PduProcessor) => {
+						if (!sessionObj.appliedProcessors.find(p => p.name === processor.name)) {
+							ProcessorManager.attachProcessor(sessionObj, ProcessorManager.getProcessor(processor.name));
+						}
+					});
 				});
 			});
 		} catch (e) {
