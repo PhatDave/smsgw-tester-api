@@ -1,10 +1,10 @@
-import {Center} from "../Center/Center";
-import {PDU} from "../CommonObjects";
-import {PduProcessor} from "./PduProcessor";
+import {Center} from "../../../Center/Center";
+import {PDU} from "../../../CommonObjects";
+import Postprocessor from "../Postprocessor";
 
 const smpp = require("smpp");
 
-export class EchoPduProcessor extends PduProcessor {
+export class EchoPduProcessor extends Postprocessor {
 	serverSessionType: string = Center.name;
 
 	processPdu(session: any, pdu: PDU, ...args: any[]): Promise<any> {

@@ -1,8 +1,8 @@
-import {Client} from "../../Client/Client";
-import {PDU} from "../../CommonObjects";
-import {PduProcessor} from "../PduProcessor";
+import {Client} from "../../../Client/Client";
+import {PDU} from "../../../CommonObjects";
+import Preprocessor from "../Preprocessor";
 
-export class DestinationEnumeratorProcessor extends PduProcessor {
+export class DestinationEnumeratorProcessor extends Preprocessor {
 	serverSessionType: string = Client.name;
 	private iterator = 0;
 

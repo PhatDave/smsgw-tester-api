@@ -1,8 +1,8 @@
-import {Client} from "../../Client/Client";
-import {PDU} from "../../CommonObjects";
-import {PduProcessor} from "../PduProcessor";
+import {Client} from "../../../Client/Client";
+import {PDU} from "../../../CommonObjects";
+import Postprocessor from "../Postprocessor";
 
-export class DeliverSmReplyProcessor extends PduProcessor {
+export class DeliverSmReplyProcessor extends Postprocessor {
 	serverSessionType: string = Client.name;
 
 	processPdu(session: any, pdu: PDU, ...args: any[]): Promise<any> {

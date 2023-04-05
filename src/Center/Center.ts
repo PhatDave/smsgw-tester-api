@@ -1,8 +1,9 @@
 import {PDU} from "../CommonObjects";
 import {Job} from "../Job/Job";
 import Logger from "../Logger";
-import {DebugPduProcessor} from "../PDUProcessor/DebugPduProcessor";
 import {PduProcessor} from "../PDUProcessor/PduProcessor";
+import {DebugPduProcessor} from "../PDUProcessor/Postprocessor/Center/DebugPduProcessor";
+import ProcessorManager from "../PDUProcessor/ProcessorManager";
 import {SmppSession} from "../SmppSession";
 
 const NanoTimer = require('nanotimer');
@@ -117,7 +118,6 @@ export class Center extends SmppSession {
 	initialize(): void {
 		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
 		this.server.listen(this.port);
-		PduProcessor.attachProcessor(this, PduProcessor.getProcessor(DebugPduProcessor.name));
 		this.setStatus(0);
 	}
 
@@ -142,7 +142,7 @@ export class Center extends SmppSession {
 			defaultSingleJob: this._defaultSingleJob.serialize(),
 			defaultMultipleJob: this._defaultMultipleJob.serialize(),
 			processors: this.pduProcessors.map(p => p.serialize()),
-			availableProcessors: PduProcessor.getProcessorsForType(Center.name)
+			availableProcessors: ProcessorManager.getProcessorsForType(this.constructor.name)
 		};
 	}
 

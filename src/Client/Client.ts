@@ -1,9 +1,9 @@
-import {Center} from "../Center/Center";
 import {PDU} from "../CommonObjects";
 import {Job} from "../Job/Job";
 import Logger from "../Logger";
-import {DeliverSmReplyProcessor} from "../PDUProcessor/Client/DeliverSmReplyProcessor";
 import {PduProcessor} from "../PDUProcessor/PduProcessor";
+import {DeliverSmReplyProcessor} from "../PDUProcessor/Postprocessor/Client/DeliverSmReplyProcessor";
+import ProcessorManager from "../PDUProcessor/ProcessorManager";
 import PersistentPromise from "../PersistentPromise";
 import {SmppSession} from "../SmppSession";
 
@@ -42,8 +42,6 @@ export class Client extends SmppSession {
 
 		this._defaultSingleJob = Job.createEmptySingle('submit_sm');
 		this._defaultMultipleJob = Job.createEmptyMultiple('submit_sm');
-
-		this.addPduProcessor(PduProcessor.getProcessor(DeliverSmReplyProcessor.name));
 
 		this.logger = new Logger(`Client-${id}`);
 	}
@@ -124,7 +122,7 @@ export class Client extends SmppSession {
 			defaultSingleJob: this._defaultSingleJob.serialize(),
 			defaultMultipleJob: this._defaultMultipleJob.serialize(),
 			processors: this.pduProcessors.map(p => p.serialize()),
-			availableProcessors: PduProcessor.getProcessorsForType(Client.name)
+			availableProcessors: ProcessorManager.getProcessorsForType(this.constructor.name)
 		};
 	}
 

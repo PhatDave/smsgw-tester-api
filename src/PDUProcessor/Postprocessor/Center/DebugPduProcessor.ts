@@ -1,8 +1,8 @@
-import {Center} from "../Center/Center";
-import {PDU} from "../CommonObjects";
-import {PduProcessor} from "./PduProcessor";
+import {Center} from "../../../Center/Center";
+import {PDU} from "../../../CommonObjects";
+import Postprocessor from "../Postprocessor";
 
-export class DebugPduProcessor extends PduProcessor {
+export class DebugPduProcessor extends Postprocessor {
 	serverSessionType: string = Center.name;
 
 	processPdu(session: any, pdu: PDU, ...args: any[]): Promise<any> {

@@ -1,4 +1,3 @@
-import {Center} from "../Center/Center";
 import {Client} from "../Client/Client";
 import ClientSessionManager from "../Client/ClientSessionManager";
 import Logger from "../Logger";
