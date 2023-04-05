@@ -2,6 +2,7 @@ import {PDU} from "../CommonObjects";
 import Logger from "../Logger";
 
 export default abstract class PduProcessor {
+	readonly abstract type: string
 	readonly sessionType: string;
 	readonly name: string = this.constructor.name;
 	readonly logger: Logger = new Logger(`PduProcessor: ${this.name}`);
@@ -15,7 +16,8 @@ export default abstract class PduProcessor {
 	serialize(): object {
 		return {
 			servesSessionType: this.sessionType,
-			name: this.name
+			name: this.name,
+			type: this.type
 		};
 	}
 }

@@ -2,6 +2,8 @@ import EventEmitter from "events";
 import Job from "./Job/Job";
 import Logger from "./Logger";
 import PduProcessor from "./PDUProcessor/PduProcessor";
+import Postprocessor from "./PDUProcessor/Postprocessor/Postprocessor";
+import Preprocessor from "./PDUProcessor/Preprocessor/Preprocessor";
 
 const NanoTimer = require("nanotimer");
 const smpp = require("smpp");
@@ -14,7 +16,8 @@ export default abstract class SmppSession {
 		MESSAGE_SEND_COUNTER_UPDATE_EVENT: "MESSAGE_SEND_COUNTER_UPDATE_EVENT",
 	};
 	abstract STATUSES: string[];
-	abstract pduProcessors: PduProcessor[];
+
+	processors: { [key: string]: PduProcessor[] } = {};
 	readonly UPDATE_WS: string = "UPDATE_WS";
 	readonly eventEmitter: EventEmitter = new EventEmitter();
 	readonly logger: Logger = new Logger(`SmppSession`);
@@ -27,6 +30,9 @@ export default abstract class SmppSession {
 		this.eventEmitter.on(this.EVENT.STATUS_CHANGED, () => this.updateWs(this.EVENT.STATUS_CHANGED));
 		this.eventEmitter.on(this.EVENT.ANY_PDU, (pdu: any) => this.updateWs(this.EVENT.ANY_PDU, [pdu]));
 		this.eventEmitter.on(this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT, (count: number) => this.updateWs(this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT, [count]));
+
+		this.processors[Preprocessor.name] = [];
+		this.processors[Postprocessor.name] = [];
 	}
 
 	abstract _username: string;
@@ -156,32 +162,44 @@ export default abstract class SmppSession {
 		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
 	}
 
-	addPduProcessor(pduProcessor: PduProcessor): void {
-		if (this.pduProcessors.indexOf(pduProcessor) === -1) {
-			this.pduProcessors.push(pduProcessor);
-			this.logger.log1(`Adding PDU processor: ${pduProcessor.constructor.name}-${this.id}, now active: ${this.pduProcessors.length} processors`);
-			this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
-		} else {
-			this.logger.log1(`PDU processor: ${pduProcessor.constructor.name}-${this.id} already attached to session`);
-		}
+	attachPreprocessor(processor: PduProcessor): void {
+		this.attachProcessor(processor, this.processors.Preprocessor);
 	}
 
-	removePduProcessor(pduProcessor: PduProcessor): void {
-		this.pduProcessors.splice(this.pduProcessors.indexOf(pduProcessor), 1);
-		this.logger.log1(`Removing PDU processor: ${pduProcessor.constructor.name}-${this.id}, now active: ${this.pduProcessors.length} processors`);
-		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+	attachPostprocessor(processor: PduProcessor): void {
+		this.attachProcessor(processor, this.processors.Postprocessor);
 	}
 
-	getPduProcessors(): PduProcessor[] {
-		return this.pduProcessors;
+	detachPreprocessor(processor: PduProcessor): void {
+		this.detachProcessor(processor, this.processors.Preprocessor);
+	}
+
+	detachPostprocessor(processor: PduProcessor): void {
+		this.detachProcessor(processor, this.processors.Postprocessor);
 	}
 
 	serializePduProcessors(): object {
-		this.logger.log1(`Serializing ${this.pduProcessors.length} clients`)
-		return this.pduProcessors.map((processor: PduProcessor) => {
+		let processors: PduProcessor[] = this.processors.Preprocessor.concat(this.processors.Postprocessor);
+		return processors.map((processor: PduProcessor) => {
 			return processor.serialize();
 		});
 	}
 
 	abstract eventAnyPdu(session: any, pdu: any): Promise<any>;
+
+	private detachProcessor(processor: PduProcessor, array: PduProcessor[]): void {
+		array.splice(array.indexOf(processor), 1);
+		this.logger.log1(`Detaching PDU processor: ${processor.constructor.name}-${this.id}, now active: ${array.length} processors`);
+		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+	}
+
+	private attachProcessor(processor: PduProcessor, array: PduProcessor[]): void {
+		if (array.indexOf(processor) === -1) {
+			array.push(processor);
+			this.logger.log1(`Attaching PDU processor: ${processor.constructor.name}-${this.id}, now active: ${array.length} processors`);
+			this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+		} else {
+			this.logger.log1(`PDU processor: ${processor.constructor.name}-${this.id} already attached to session`);
+		}
+	}
 }

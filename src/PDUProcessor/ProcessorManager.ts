@@ -6,8 +6,10 @@ import PduProcessor from "./PduProcessor";
 import DebugPduProcessor from "./Postprocessor/Center/DebugPduProcessor";
 import EchoPduProcessor from "./Postprocessor/Center/EchoPduProcessor";
 import DeliverSmReplyProcessor from "./Postprocessor/Client/DeliverSmReplyProcessor";
+import Postprocessor from "./Postprocessor/Postprocessor";
 import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnumeratorProcessor";
 import SourceEnumeratorProcessor from "./Preprocessor/Client/SourceEnumeratorProcessor";
+import Preprocessor from "./Preprocessor/Preprocessor";
 
 export default class ProcessorManager {
 	static preprocessors: PduProcessor[];
@@ -45,15 +47,36 @@ export default class ProcessorManager {
 	}
 
 	static attachProcessor(session: SmppSession, processor: PduProcessor): void {
-		this.logger.log1(`Trying to attach processor ${processor.name} to session ${session.constructor.name}-${session.id}`);
+		this.logger.log1(`Trying to attach preprocessor ${processor.name} to session ${session.constructor.name}-${session.id}`);
 		if (this.areCompatible(session, processor)) {
-			session.addPduProcessor(processor);
+			// This could be done a little better but this is OK for now
+			switch (processor.type) {
+				case Preprocessor.name:
+					session.attachPreprocessor(processor);
+					break;
+				case Postprocessor.name:
+					session.attachPostprocessor(processor);
+					break;
+				default:
+					this.logger.log1(`Processor ${processor.name} is not a preprocessor or a postprocessor`);
+					break;
+			}
 		}
 	}
 
 	static detachProcessor(session: SmppSession, processor: PduProcessor): void {
 		this.logger.log1(`Trying to detach processor ${processor.name} from session ${session.constructor.name}-${session.id}`);
-		session.removePduProcessor(processor);
+		switch (processor.type) {
+			case Preprocessor.name:
+				session.detachPreprocessor(processor);
+				break;
+			case Postprocessor.name:
+				session.detachPostprocessor(processor);
+				break;
+			default:
+				this.logger.log1(`Processor ${processor.name} is not a preprocessor or a postprocessor`);
+				break;
+		}
 	}
 
 	static areCompatible(session: SmppSession, processor: PduProcessor): boolean {
