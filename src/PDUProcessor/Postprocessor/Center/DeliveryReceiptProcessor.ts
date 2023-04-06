@@ -32,7 +32,7 @@ export default class DeliveryReceiptProcessor extends Postprocessor {
 						short_message: drMessage,
 						esm_class: 4,
 					});
-					session.send(DRPdu);
+					entity?.doSendPdu(DRPdu, session);
 
 					resolve(pdu);
 				}

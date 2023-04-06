@@ -9,7 +9,7 @@ export default class EnquireLinkReplyProcessor extends Postprocessor {
 	processPdu(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise((resolve, reject) => {
 			if (!!pdu.command && pdu.command === 'enquire_link') {
-				session.send(pdu.response());
+				entity?.doSendPdu(pdu.response(), session);
 				resolve(pdu);
 			}
 		});

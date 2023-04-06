@@ -16,7 +16,7 @@ export default class EchoPduProcessor extends Postprocessor {
 					destination_addr: pdu.source_addr,
 					short_message: pdu.short_message
 				});
-				session.send(sentPdu);
+				entity?.doSendPdu(sentPdu, session);
 				resolve(sentPdu);
 			}
 		});

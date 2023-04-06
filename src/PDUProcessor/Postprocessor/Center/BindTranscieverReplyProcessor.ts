@@ -20,7 +20,7 @@ export default class BindTranscieverReplyProcessor extends Postprocessor {
 				if (pdu.system_id === entity?.username && pdu.password === entity?.password) {
 					this.logger.log1(`Center-${entity?.id} client connection successful`);
 					if (pdu.response) {
-						session.send(pdu.response());
+						entity?.doSendPdu(pdu.response(), session);
 					}
 					session.resume();
 					// @ts-ignore
@@ -30,9 +30,9 @@ export default class BindTranscieverReplyProcessor extends Postprocessor {
 				} else {
 					this.logger.log1(`Center-${entity?.id} client connection failed, invalid credentials (expected: ${entity?.username}, ${entity?.password})`);
 					if (pdu.response) {
-						session.send(pdu.response({
+						entity?.doSendPdu(pdu.response({
 							command_status: smpp.ESME_RBINDFAIL
-						}));
+						}), session);
 					}
 					// @ts-ignore
 					entity?.pendingSessions = entity?.pendingSessions.filter((s) => s !== session);

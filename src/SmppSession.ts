@@ -13,7 +13,8 @@ export default abstract class SmppSession {
 	readonly EVENT: any = {
 		STATUS_CHANGED: "STATUS_CHANGED",
 		STATE_CHANGED: "STATE_CHANGED",
-		ANY_PDU: "ANY_PDU",
+		ANY_PDU_TX: "ANY_PDU_TX",
+		ANY_PDU_RX: "ANY_PDU_RX",
 		MESSAGE_SEND_COUNTER_UPDATE_EVENT: "MESSAGE_SEND_COUNTER_UPDATE_EVENT",
 	};
 	abstract STATUSES: string[];
@@ -21,7 +22,7 @@ export default abstract class SmppSession {
 	processors: { [key: string]: PduProcessor[] } = {};
 	readonly UPDATE_WS: string = "UPDATE_WS";
 	readonly eventEmitter: EventEmitter = new EventEmitter();
-	readonly logger: Logger = new Logger(`SmppSession`);
+	readonly logger: Logger = new Logger(this.constructor.name);
 	readonly sendTimer: any = new NanoTimer();
 	readonly counterUpdateTimer: any = new NanoTimer();
 	readonly MESSAGE_SEND_UPDATE_DELAY: number = Number(process.env.MESSAGE_SEND_UPDATE_DELAY) || 500;
@@ -29,7 +30,8 @@ export default abstract class SmppSession {
 	protected constructor() {
 		this.eventEmitter.on(this.EVENT.STATE_CHANGED, () => this.updateWs(this.EVENT.STATE_CHANGED));
 		this.eventEmitter.on(this.EVENT.STATUS_CHANGED, () => this.updateWs(this.EVENT.STATUS_CHANGED));
-		this.eventEmitter.on(this.EVENT.ANY_PDU, (pdu: any) => this.updateWs(this.EVENT.ANY_PDU, [pdu]));
+		this.eventEmitter.on(this.EVENT.ANY_PDU_TX, (pdu: any) => this.updateWs(this.EVENT.ANY_PDU_TX, [pdu]));
+		this.eventEmitter.on(this.EVENT.ANY_PDU_RX, (pdu: any) => this.updateWs(this.EVENT.ANY_PDU_RX, [pdu]));
 		this.eventEmitter.on(this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT, (count: number) => this.updateWs(this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT, [count]));
 
 		this.processors[Preprocessor.name] = [];
@@ -110,6 +112,13 @@ export default abstract class SmppSession {
 
 	abstract sendPdu(pdu: object, force?: boolean): Promise<object>;
 
+	doSendPdu(pdu: PDU, session: any): Promise<any> {
+		return new Promise<any>((resolve, reject) => {
+			this.eventEmitter.emit(this.EVENT.ANY_PDU_TX, pdu);
+			session.send(pdu, (reply: any) => resolve(reply));
+		})
+	}
+
 	sendSingle(job: Job): Promise<object> {
 		return this.sendPdu(job.pdu);
 	}
@@ -153,7 +162,8 @@ export default abstract class SmppSession {
 			case this.EVENT.STATUS_CHANGED:
 				message.data = this.status;
 				break;
-			case this.EVENT.ANY_PDU:
+			case this.EVENT.ANY_PDU_RX:
+			case this.EVENT.ANY_PDU_TX:
 				message.data = args![0];
 				break;
 			case this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT:
@@ -185,7 +195,7 @@ export default abstract class SmppSession {
 
 	eventAnyPdu(session: any, pdu: PDU): Promise<any> {
 		if (!!pdu) {
-			this.eventEmitter.emit(this.EVENT.ANY_PDU, pdu);
+			this.eventEmitter.emit(this.EVENT.ANY_PDU_RX, pdu);
 			// console.log("IS PDU TIME");
 			this.logger.log6(pdu);
 			this.processors.Postprocessor.forEach((processor: PduProcessor) => processor.processPdu(session, pdu, this));

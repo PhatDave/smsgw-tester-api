@@ -16,7 +16,7 @@ export default class SubmitSmReplyProcessor extends Postprocessor {
 				let response = pdu.response();
 				response.message_id = this.messageIdIterator++;
 				MessageIdManager.addMessageId(pdu, response.message_id);
-				session.send(response);
+				entity?.doSendPdu(response, session);
 				resolve(pdu);
 			}
 		});

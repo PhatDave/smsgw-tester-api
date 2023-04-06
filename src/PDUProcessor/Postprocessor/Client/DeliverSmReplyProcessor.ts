@@ -9,7 +9,7 @@ export default class DeliverSmReplyProcessor extends Postprocessor {
 	processPdu(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise((resolve, reject) => {
 			if (!!pdu.command && pdu.command === 'deliver_sm') {
-				session.send(pdu.response());
+				entity?.doSendPdu(pdu.response(), session);
 				resolve(pdu);
 			}
 		});

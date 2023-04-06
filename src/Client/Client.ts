@@ -145,7 +145,9 @@ export default class Client extends SmppSession {
 			let pduCopy = new smpp.PDU(pdu.command, {...pdu});
 			this.processors.Preprocessor.forEach((processor: PduProcessor) => processor.processPdu(this.session, pduCopy));
 			this.logger.log5(`Client-${this.id} sending PDU: ${JSON.stringify(pduCopy)}`);
-			this.session.send(pduCopy, (replyPdu: object) => resolve(replyPdu));
+			this.doSendPdu(pduCopy, this.session).then((replyPdu: any) => {
+				resolve(replyPdu);
+			});
 		});
 	}
 
