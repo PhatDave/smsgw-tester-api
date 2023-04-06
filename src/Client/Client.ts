@@ -132,7 +132,11 @@ export default class Client extends SmppSession {
 
 	close(): Promise<void> {
 		this.logger.log1(`Client-${this.id} closing connection`);
-		return Promise.resolve(this.session.close());
+		if (this.session) {
+			return Promise.resolve(this.session.close());
+		} else {
+			return Promise.resolve();
+		}
 	}
 
 	sendPdu(pdu: PDU, force?: boolean): Promise<object> {
