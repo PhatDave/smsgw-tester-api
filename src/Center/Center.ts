@@ -11,8 +11,11 @@ import SmppSession from "../SmppSession";
 const NanoTimer = require('nanotimer');
 const smpp = require("smpp");
 
+const PORT_RELISTEN_DELAY: number = Number(process.env.PORT_RELISTEN_DELAY) || 500;
+
 export default class Center extends SmppSession {
 	readonly STATUSES: string[] = [
+		"PORT BUSY",
 		"WAITING CONNECTION",
 		"CONNECTING",
 		"CONNECTED",
@@ -125,7 +128,8 @@ export default class Center extends SmppSession {
 
 	initialize(): void {
 		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
-		this.server.listen(this.port);
+		this.server.on('error', this.eventServerError.bind(this));
+		this.doListen();
 		this.setStatus(0);
 	}
 
@@ -167,6 +171,10 @@ export default class Center extends SmppSession {
 		}
 	}
 
+	private doListen(): void {
+		this.server.listen(this.port);
+	}
+
 	private validateSessions(reject: (reason?: any) => void) {
 		if (this.sessions.length === 0) {
 			reject(`No clients connected`);
@@ -194,6 +202,11 @@ export default class Center extends SmppSession {
 
 	private eventSessionError(session: any): void {
 		this.logger.log1(`A client encountered an error on center-${this.id}`);
+	}
+
+	private eventServerError(): void {
+		this.logger.log1(`Center tried listening on port which is already in use, retrying in ${PORT_RELISTEN_DELAY}`);
+		setTimeout(this.doListen.bind(this), PORT_RELISTEN_DELAY);
 	}
 
 	private eventSessionClose(session: any): void {
