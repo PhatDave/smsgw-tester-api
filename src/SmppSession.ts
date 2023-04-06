@@ -125,6 +125,8 @@ export default abstract class SmppSession {
 		});
 	}
 
+	abstract destroy(): void;
+
 	sendSingle(job: Job): Promise<object> {
 		return this.sendPdu(job.pdu);
 	}

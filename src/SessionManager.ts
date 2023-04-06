@@ -41,6 +41,7 @@ export default abstract class SessionManager {
 		return new Promise<void>((resolve, reject) => {
 			this.logger.log1(`Removing session with id ${session.id}`);
 			session.close();
+			session.destroy();
 			this.sessions = this.sessions.filter(s => s.id !== session.id);
 			resolve();
 		});
