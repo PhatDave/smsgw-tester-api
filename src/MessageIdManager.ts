@@ -1,7 +1,7 @@
 import {PDU} from "./CommonObjects";
 
 export default class MessageIdManager {
-	private static messages: {[key: string]: number} = {};
+	private static messages: { [key: string]: number } = {};
 
 	static addMessageId(message: PDU, id: number): void {
 		this.messages[this.getMessageHash(message)] = id;

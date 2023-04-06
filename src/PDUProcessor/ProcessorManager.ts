@@ -26,10 +26,10 @@ export default class ProcessorManager {
 		// Try running eb22a43 to find out what's wrong with the previous approach
 		ProcessorManager.postprocessors = [
 			new EnquireLinkReplyProcessor(Center.name),
-			new EchoPduProcessor(Center.name),
 			new DeliverSmReplyProcessor(Client.name),
 			new SubmitSmReplyProcessor(Center.name),
 			new BindTranscieverReplyProcessor(Center.name),
+			new EchoPduProcessor(Center.name),
 			new DeliveryReceiptProcessor(Center.name)
 		];
 		ProcessorManager.preprocessors = [

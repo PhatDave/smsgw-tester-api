@@ -73,7 +73,8 @@ export default class Client extends SmppSession {
 		super.defaultMultipleJob = job;
 	}
 
-	destroy(): void {}
+	destroy(): void {
+	}
 
 	doConnect(): PersistentPromise {
 		this.connectPromise = new PersistentPromise((resolve, reject) => {

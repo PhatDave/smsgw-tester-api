@@ -5,8 +5,8 @@ import Preprocessor from "../Preprocessor";
 const smpp = require('smpp');
 
 export default class LongSmsProcessor extends Preprocessor {
-	private iterator: number = 0;
 	static readonly maxMessageSizeBits = 1072;
+	private iterator: number = 0;
 
 	constructor(type: string) {
 		// An sms can have a maximum length (short_message) of 1120 bits or 140 bytes.
@@ -27,6 +27,24 @@ export default class LongSmsProcessor extends Preprocessor {
 		// 0xYY: Number of fragments in the concatenated message
 		// 0xZZ: Fragment number/index within the concatenated message 1072
 		super(type);
+	}
+
+	static getCharacterSizeForEncoding(pdu: PDU) {
+		let encoding: number | undefined = pdu.data_coding;
+		if (!encoding) {
+			encoding = 0;
+		}
+		let characterSizeBits: number = 0;
+		switch (encoding) {
+			case 0:
+			case 1:
+				characterSizeBits = 8;
+				break;
+			case 8:
+				characterSizeBits = 16;
+				break;
+		}
+		return characterSizeBits;
 	}
 
 	processPdu(session: any, pdu: PDU, entity?: SmppSession | undefined): Promise<any> {
@@ -64,23 +82,5 @@ export default class LongSmsProcessor extends Preprocessor {
 				}
 			}
 		});
-	}
-
-	static getCharacterSizeForEncoding(pdu: PDU) {
-		let encoding: number | undefined = pdu.data_coding;
-		if (!encoding) {
-			encoding = 0;
-		}
-		let characterSizeBits: number = 0;
-		switch (encoding) {
-			case 0:
-			case 1:
-				characterSizeBits = 8;
-				break;
-			case 8:
-				characterSizeBits = 16;
-				break;
-		}
-		return characterSizeBits;
 	}
 }
