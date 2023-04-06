@@ -6,6 +6,7 @@ const smpp = require('smpp');
 
 export default class LongSmsProcessor extends Preprocessor {
 	private iterator: number = 0;
+	static readonly maxMessageSizeBits = 1072;
 
 	constructor(type: string) {
 		// An sms can have a maximum length (short_message) of 1120 bits or 140 bytes.
@@ -31,25 +32,12 @@ export default class LongSmsProcessor extends Preprocessor {
 	processPdu(session: any, pdu: PDU, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
 			if (!!pdu.short_message) {
-				let encoding: number | undefined = pdu.data_coding;
-				if (!encoding) {
-					encoding = 0;
-				}
-				let characterSizeBits: number = 0;
-				switch (encoding) {
-					case 0:
-					case 1:
-						characterSizeBits = 8;
-						break;
-					case 8:
-						characterSizeBits = 16;
-						break;
-				}
+				let characterSizeBits: number = LongSmsProcessor.getCharacterSizeForEncoding(pdu);
+				let maxMessageLength: number = LongSmsProcessor.maxMessageSizeBits / characterSizeBits;
 				if (characterSizeBits) {
 					let splitMessage: string[] = [];
 					let message: string = pdu.short_message;
 					let messageLength: number = message.length;
-					let maxMessageLength: number = 1072 / characterSizeBits;
 					let messageCount: number = Math.ceil(messageLength / maxMessageLength);
 					for (let i = 0; i < messageCount; i++) {
 						splitMessage.push(message.substr(i * maxMessageLength, maxMessageLength));
@@ -76,5 +64,23 @@ export default class LongSmsProcessor extends Preprocessor {
 				}
 			}
 		});
+	}
+
+	static getCharacterSizeForEncoding(pdu: PDU) {
+		let encoding: number | undefined = pdu.data_coding;
+		if (!encoding) {
+			encoding = 0;
+		}
+		let characterSizeBits: number = 0;
+		switch (encoding) {
+			case 0:
+			case 1:
+				characterSizeBits = 8;
+				break;
+			case 8:
+				characterSizeBits = 16;
+				break;
+		}
+		return characterSizeBits;
 	}
 }
