@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import {PDU} from "./CommonObjects";
+import {PDU, WSMessage} from "./CommonObjects";
 import Job from "./Job/Job";
 import Logger from "./Logger";
 import PduProcessor from "./PDUProcessor/PduProcessor";
@@ -157,11 +157,9 @@ export default abstract class SmppSession {
 
 	updateWs(event: string, args?: any[]): void {
 		this.logger.log1(`Update WS: ${event}`);
-		let message: {
-			type: string,
-			data?: any
-		} = {
+		let message: WSMessage = {
 			type: event,
+			identifier: `${this.constructor.name}:${this.id.toString()}`
 		};
 		switch (event) {
 			case this.EVENT.STATE_CHANGED:

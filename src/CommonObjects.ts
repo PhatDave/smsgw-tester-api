@@ -30,3 +30,8 @@ export type SerializedJob = {
 	count?: number;
 	perSecond?: number;
 };
+export type WSMessage = {
+	type: string;
+	identifier: string;
+	data?: any;
+};

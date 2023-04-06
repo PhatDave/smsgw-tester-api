@@ -1,3 +1,4 @@
+import {WSMessage} from "../CommonObjects";
 import Logger from "../Logger";
 import SessionManager from "../SessionManager";
 import SmppSession from "../SmppSession";
@@ -55,8 +56,10 @@ export default class ClientSet {
 		this.clients.splice(this.clients.indexOf(ws), 1);
 	}
 
-	notifyClients(message: string) {
-		let compressedMessage = ZlibCoder.compress(message);
+	notifyClients(message: WSMessage) {
+		if (message.identifier !== this.identifier) return;
+		let textMessage: string = JSON.stringify(message);
+		let compressedMessage = ZlibCoder.compress(textMessage);
 		if (this.clients.length > 0) {
 			this.logger.log2(`Notifying clients: ${message}`);
 			this.clients.forEach((ws) => {
@@ -66,6 +69,6 @@ export default class ClientSet {
 	}
 
 	private attachListener(session: SmppSession) {
-		session.on(session.UPDATE_WS, (message: object) => this.notifyClients(JSON.stringify(message)));
+		session.on(session.UPDATE_WS, (message: WSMessage) => this.notifyClients(message));
 	}
 }
