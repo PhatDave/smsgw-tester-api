@@ -113,7 +113,7 @@ export default class Center extends SmppSession {
 
 			let count = job.count || 1;
 			let interval = 1 / (job.perSecond || 1);
-			this.setStatus(3);
+			this.setStatus(4);
 			this.sendTimer.setInterval(() => {
 				if (count > 0 && counter >= count) {
 					this.cancelSendInterval();
@@ -130,7 +130,7 @@ export default class Center extends SmppSession {
 		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
 		this.server.on('error', this.eventServerError.bind(this));
 		this.doListen();
-		this.setStatus(0);
+		this.setStatus(1);
 	}
 
 	close(): Promise<void> {
@@ -140,7 +140,7 @@ export default class Center extends SmppSession {
 			this.sessions.forEach((session: any) => {
 				session.close();
 			});
-			this.setStatus(0);
+			this.setStatus(1);
 			resolve();
 		});
 	}
@@ -163,11 +163,11 @@ export default class Center extends SmppSession {
 
 	updateStatus(): void {
 		if (this.sessions.length > 0) {
-			this.setStatus(2);
+			this.setStatus(3);
 		} else if (this.pendingSessions.length > 0) {
-			this.setStatus(1);
+			this.setStatus(2);
 		} else {
-			this.setStatus(0);
+			this.setStatus(1);
 		}
 	}
 
@@ -206,6 +206,7 @@ export default class Center extends SmppSession {
 
 	private eventServerError(): void {
 		this.logger.log1(`Center tried listening on port which is already in use, retrying in ${PORT_RELISTEN_DELAY}`);
+		this.setStatus(0);
 		setTimeout(this.doListen.bind(this), PORT_RELISTEN_DELAY);
 	}
 
