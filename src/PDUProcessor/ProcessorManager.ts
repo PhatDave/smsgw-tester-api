@@ -12,6 +12,7 @@ import DeliverSmReplyProcessor from "./Postprocessor/Client/DeliverSmReplyProces
 import Postprocessor from "./Postprocessor/Postprocessor";
 import DeliveryReceiptRequestProcessor from "./Preprocessor/Client/DeliveryReceiptRequestProcessor";
 import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnumeratorProcessor";
+import LongSmsProcessor from "./Preprocessor/Client/LongSmsProcessor";
 import SourceEnumeratorProcessor from "./Preprocessor/Client/SourceEnumeratorProcessor";
 import Preprocessor from "./Preprocessor/Preprocessor";
 
@@ -34,7 +35,8 @@ export default class ProcessorManager {
 		ProcessorManager.preprocessors = [
 			new DestinationEnumeratorProcessor(Client.name),
 			new SourceEnumeratorProcessor(Client.name),
-			new DeliveryReceiptRequestProcessor(Client.name)
+			new DeliveryReceiptRequestProcessor(Client.name),
+			new LongSmsProcessor(Client.name)
 		];
 	}
 

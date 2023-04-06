@@ -86,7 +86,7 @@ export default class Center extends SmppSession {
 			this.logger.log5(`Center-${this.id} sending PDU: ${JSON.stringify(pdu)}`);
 			let pduCopy = new smpp.PDU(pdu.command, {...pdu});
 			let session = this.getNextSession();
-			this.processors.Preprocessor.forEach((processor: PduProcessor) => processor.processPdu(session, pduCopy));
+			this.processors.Preprocessor.forEach((processor: PduProcessor) => processor.processPdu(session, pduCopy, this));
 			this.doSendPdu(pduCopy, session).then((replyPdu: any) => {
 				resolve(replyPdu);
 			});
