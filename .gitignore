@@ -4,3 +4,5 @@ package-lock.json
 sessions.json
 client_sessions.json
 center_sessions.json
+dist
+main.exe
