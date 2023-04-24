@@ -1,17 +1,15 @@
 import CenterSessionManager from "./Center/CenterSessionManager";
-import Client from "./Client/Client";
 import ClientSessionManager from "./Client/ClientSessionManager";
 import HttpServer from "./HttpServer/HttpServer";
 import Logger from "./Logger";
-import SourceEnumeratorProcessor from "./PDUProcessor/Preprocessor/Client/SourceEnumeratorProcessor";
 import ProcessorManager from "./PDUProcessor/ProcessorManager";
 import WSServer from "./WS/WSServer";
 
 const {PDU} = require("smpp");
 
-let logger = new Logger("main");
+let logger: Logger = new Logger("main");
 
-new ProcessorManager();
+let pm: ProcessorManager = new ProcessorManager();
 let clientManager: ClientSessionManager = new ClientSessionManager();
 let centerManager: CenterSessionManager = new CenterSessionManager();
 
@@ -24,31 +22,6 @@ function cleanup(): void {
 	centerManager.cleanup();
 	process.exit(0);
 }
-
-async function main() {
-	let client: Client = await clientManager.getSession(0) as Client
-	// let center: Center = await centerManager.getSession(0) as Center;
-	// setInterval(async () => {
-	// 	await client.doConnect();
-	// 	setTimeout(async () => {
-	// 		await client.doBind();
-	// 		setTimeout(async () => {
-	// 			await center.close();
-	// 		}, 1000);
-	// 	}, 1000);
-	// }, 3000);
-
-
-	// console.log(ProcessorManager.getProcessorsForType(Client.name));
-	// ProcessorManager.attachProcessor(client, ProcessorManager.getProcessor(SourceEnumeratorProcessor.name));
-	// await client.doConnect();
-	// await client.doBind();
-	// client.sendMultipleDefault();
-	ProcessorManager.attachProcessor(client, ProcessorManager.getProcessor(SourceEnumeratorProcessor.name));
-	console.log("OK");
-}
-
-main();
 
 process.on('exit', cleanup);
 process.on('SIGINT', cleanup);

@@ -4,8 +4,9 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"pkg:windows": "pkg main.js --target node16-windows-x64 --output main.exe",
-		"pkg:linux": "pkg main.js --target node16-linux-x64 --output main.exe"
+		"tsc": "tsc",
+		"pkg:windows": "pkg ./dist/main.js --target node16-windows-x64 --output main.exe",
+		"pkg:linux": "pkg ./dist/main.js --target node16-linux-x64 --output main.exe"
 	},
 	"keywords": [],
 	"author": "",

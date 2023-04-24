@@ -1,11 +1,8 @@
-// @ts-ignore
 import {WriteStream} from "fs";
 
 const fs = require('fs');
 
-// @ts-ignore
-const LOG_LEVEL: number = process.env.LOG_LEVEL || 6;
-// @ts-ignore
+const LOG_LEVEL: number = Number(process.env.LOG_LEVEL) || 0;
 const LOG_FILE: string = process.env.LOG_FILE || "";
 
 export default class Logger {
