@@ -9,7 +9,7 @@ const bodyParser = require("body-parser");
 const compression = require("compression");
 const zlib = require("zlib");
 
-const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 80;
+const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
 
 export default class HttpServer {
 	private readonly clientRequestHandler: RequestHandler;
