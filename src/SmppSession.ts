@@ -115,11 +115,11 @@ export default abstract class SmppSession {
 
 	doSendPdu(pdu: PDU, session: any): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
-			// let characterSizeBits: number = LongSmsProcessor.getCharacterSizeForEncoding(pdu);
-			// let maxMessageLength: number = LongSmsProcessor.maxMessageSizeBits / characterSizeBits;
-			// if (!!pdu.short_message && pdu.short_message.length > maxMessageLength) {
-			// 	pdu.short_message = pdu.short_message.substring(0, maxMessageLength);
-			// }
+			let characterSizeBits: number = LongSmsProcessor.getCharacterSizeForEncoding(pdu);
+			let maxMessageLength: number = LongSmsProcessor.maxMessageSizeBits / characterSizeBits;
+			if (!!pdu.short_message && pdu.short_message.length > maxMessageLength) {
+				pdu.short_message = pdu.short_message.substring(0, maxMessageLength);
+			}
 			session.send(pdu, (reply: any) => resolve(reply));
 			this.eventEmitter.emit(this.EVENT.ANY_PDU_TX, pdu);
 		});
