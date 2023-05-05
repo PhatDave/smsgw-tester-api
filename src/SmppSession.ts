@@ -6,6 +6,7 @@ import PduProcessor from "./PDUProcessor/PduProcessor";
 import Postprocessor from "./PDUProcessor/Postprocessor/Postprocessor";
 import LongSmsProcessor from "./PDUProcessor/Preprocessor/Client/LongSmsProcessor";
 import Preprocessor from "./PDUProcessor/Preprocessor/Preprocessor";
+import ProcessorManager from "./PDUProcessor/ProcessorManager";
 
 const NanoTimer = require("nanotimer");
 const smpp = require("smpp");
@@ -149,7 +150,23 @@ export default abstract class SmppSession {
 
 	abstract close(): Promise<void>;
 
-	abstract serialize(): object;
+	serialize(): object {
+		let obj = {
+			id: this._id,
+			username: this._username,
+			password: this._password,
+			status: this._status,
+			defaultSingleJob: this._defaultSingleJob.serialize(),
+			defaultMultipleJob: this._defaultMultipleJob.serialize(),
+			preprocessors: this.processors.Preprocessor.map((p: PduProcessor) => p.serialize()),
+			postprocessors: this.processors.Postprocessor.map((p: PduProcessor) => p.serialize()),
+			availablePreprocessors: ProcessorManager.getPreprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
+			availablePostprocessors: ProcessorManager.getPostprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
+		};
+		return this.postSerialize(obj);
+	}
+
+	abstract postSerialize(obj: object): object;
 
 	on(event: string, callback: (...args: any[]) => void): void {
 		this.eventEmitter.on(event, callback);
