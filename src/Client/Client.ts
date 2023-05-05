@@ -42,7 +42,7 @@ export default class Client extends SmppSession {
 		this._defaultSingleJob = Job.createEmptySingle('submit_sm');
 		this._defaultMultipleJob = Job.createEmptyMultiple('submit_sm');
 
-		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(DeliverSmReplyProcessor.name));
+		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(DeliverSmReplyProcessor.name));
 
 		this.logger = new Logger(`Client-${id}`);
 	}

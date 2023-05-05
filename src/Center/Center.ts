@@ -43,9 +43,9 @@ export default class Center extends SmppSession {
 		this._defaultSingleJob = Job.createEmptySingle('deliver_sm');
 		this._defaultMultipleJob = Job.createEmptyMultiple('deliver_sm');
 
-		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(SubmitSmReplyProcessor.name));
-		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(BindTranscieverReplyProcessor.name));
-		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(EnquireLinkReplyProcessor.name));
+		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(SubmitSmReplyProcessor.name));
+		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(BindTranscieverReplyProcessor.name));
+		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(EnquireLinkReplyProcessor.name));
 
 		this.logger = new Logger(`Center-${id}`);
 

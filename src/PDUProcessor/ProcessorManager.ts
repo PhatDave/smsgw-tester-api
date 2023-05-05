@@ -35,6 +35,8 @@ export default class ProcessorManager {
 		ProcessorManager.preprocessors = [
 			new DestinationEnumeratorProcessor(Client.name),
 			new SourceEnumeratorProcessor(Client.name),
+			new DestinationEnumeratorProcessor(Center.name),
+			new SourceEnumeratorProcessor(Center.name),
 			new DeliveryReceiptRequestProcessor(Client.name),
 			new LongSmsProcessor(Client.name)
 		];
@@ -44,48 +46,47 @@ export default class ProcessorManager {
 		return this.preprocessors.concat(this.postprocessors);
 	}
 
-	static getProcessor(name: string): PduProcessor {
+	static getProcessors(name: string): PduProcessor[] {
 		this.logger.log1(`Looking for processor with name ${name}...`);
-		let pduProcessor: PduProcessor | undefined = this.processors.find((processor: PduProcessor) => processor.name === name);
-		if (pduProcessor) {
-			this.logger.log1(`Found processor with name ${name}`);
-			return pduProcessor;
-		} else {
-			this.logger.log1(`Processor with name ${name} not found`);
-			return this.processors[0];
+		let pduProcessors: PduProcessor[] = this.processors.filter((processor: PduProcessor) => processor.name === name);
+		this.logger.log1(`Found ${pduProcessors.length} processor(s) with name ${name}`);
+		return pduProcessors;
+	}
+
+	static attachProcessors(session: SmppSession, processors: PduProcessor[]): void {
+		this.logger.log1(`Trying to attach processor ${processors.toString()} to session ${session.constructor.name}-${session.id}`);
+		for (const processor of processors) {
+			if (this.areCompatible(session, processor)) {
+				// This could be done a little better but this is OK for now
+				switch (processor.type) {
+					case Preprocessor.name:
+						session.attachPreprocessor(processor);
+						break;
+					case Postprocessor.name:
+						session.attachPostprocessor(processor);
+						break;
+					default:
+						this.logger.log1(`Processor ${processor.name} is not a preprocessor or a postprocessor`);
+						break;
+				}
+			}
 		}
 	}
 
-	static attachProcessor(session: SmppSession, processor: PduProcessor): void {
-		this.logger.log1(`Trying to attach preprocessor ${processor.name} to session ${session.constructor.name}-${session.id}`);
-		if (this.areCompatible(session, processor)) {
-			// This could be done a little better but this is OK for now
+	static detachProcessors(session: SmppSession, processors: PduProcessor[]): void {
+		this.logger.log1(`Trying to detach processors ${processors.toString()} from session ${session.constructor.name}-${session.id}`);
+		for (const processor of processors) {
 			switch (processor.type) {
 				case Preprocessor.name:
-					session.attachPreprocessor(processor);
+					session.detachPreprocessor(processor);
 					break;
 				case Postprocessor.name:
-					session.attachPostprocessor(processor);
+					session.detachPostprocessor(processor);
 					break;
 				default:
 					this.logger.log1(`Processor ${processor.name} is not a preprocessor or a postprocessor`);
 					break;
 			}
-		}
-	}
-
-	static detachProcessor(session: SmppSession, processor: PduProcessor): void {
-		this.logger.log1(`Trying to detach processor ${processor.name} from session ${session.constructor.name}-${session.id}`);
-		switch (processor.type) {
-			case Preprocessor.name:
-				session.detachPreprocessor(processor);
-				break;
-			case Postprocessor.name:
-				session.detachPostprocessor(processor);
-				break;
-			default:
-				this.logger.log1(`Processor ${processor.name} is not a preprocessor or a postprocessor`);
-				break;
 		}
 	}
 

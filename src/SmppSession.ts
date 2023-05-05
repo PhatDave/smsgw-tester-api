@@ -227,9 +227,11 @@ export default abstract class SmppSession {
 	}
 
 	private detachProcessor(processor: PduProcessor, array: PduProcessor[]): void {
-		array.splice(array.indexOf(processor), 1);
-		this.logger.log1(`Detaching PDU processor: ${processor.constructor.name}-${this.id}, now active: ${array.length} processors`);
-		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+		if (array.indexOf(processor) >= 0) {
+			array.splice(array.indexOf(processor), 1);
+			this.logger.log1(`Detaching PDU processor: ${processor.constructor.name}-${this.id}, now active: ${array.length} processors`);
+			this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+		}
 	}
 
 	private attachProcessor(processor: PduProcessor, array: PduProcessor[]): void {
