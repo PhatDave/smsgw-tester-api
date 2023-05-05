@@ -5,6 +5,7 @@ import Preprocessor from "../Preprocessor";
 const smpp = require('smpp');
 
 export default class LongSmsProcessor extends Preprocessor {
+    applicableCommands: string[] = ['submit_sm', 'deliver_sm'];
 	static readonly maxMessageSizeBits = 1072;
 	private iterator: number = 0;
 
@@ -47,7 +48,7 @@ export default class LongSmsProcessor extends Preprocessor {
 		return characterSizeBits;
 	}
 
-	processPdu(session: any, pdu: PDU, entity?: SmppSession | undefined): Promise<any> {
+	protected doProcess(session: any, pdu: PDU, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
 			if (!!pdu.short_message) {
 				let characterSizeBits: number = LongSmsProcessor.getCharacterSizeForEncoding(pdu);

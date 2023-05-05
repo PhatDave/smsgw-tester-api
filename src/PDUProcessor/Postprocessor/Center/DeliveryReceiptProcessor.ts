@@ -5,13 +5,14 @@ import Postprocessor from "../Postprocessor";
 const smpp = require("smpp");
 
 export default class DeliveryReceiptProcessor extends Postprocessor {
+    applicableCommands: string[] = ['submit_sm'];
 	constructor(type: string) {
 		super(type);
 	}
 
-	processPdu(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
+	protected doProcess(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
-			if (!!pdu.command && pdu.command === "submit_sm" && pdu.registered_delivery) {
+			if (pdu.registered_delivery) {
 				let drMessage: string = "";
 				let date: string = new Date().toISOString().replace(/T/, '').replace(/\..+/, '').replace(/-/g, '').replace(/:/g, '').substring(2, 12);
 
@@ -38,9 +39,5 @@ export default class DeliveryReceiptProcessor extends Postprocessor {
 				}
 			}
 		});
-	}
-
-	private padLeft(str: string, pad: string, length: number): string {
-		return (new Array(length + 1).join(pad) + str).slice(-length);
 	}
 }

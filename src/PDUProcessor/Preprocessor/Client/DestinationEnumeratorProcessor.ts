@@ -2,13 +2,14 @@ import SmppSession from "../../../SmppSession";
 import Preprocessor from "../Preprocessor";
 
 export default class DestinationEnumeratorProcessor extends Preprocessor {
+    applicableCommands: string[] = ['submit_sm', 'deliver_sm'];
 	private iterator: number = 0;
 
 	constructor(type: string) {
 		super(type);
 	}
 
-	processPdu(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
+	protected doProcess(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
 			if (!!pdu.destination_addr) {
 				pdu.destination_addr = pdu.destination_addr + this.padLeft(String(this.iterator++), '0', 5);
