@@ -15,6 +15,11 @@ import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnu
 import LongSmsProcessor from "./Preprocessor/Client/LongSmsProcessor";
 import SourceEnumeratorProcessor from "./Preprocessor/Client/SourceEnumeratorProcessor";
 import Preprocessor from "./Preprocessor/Preprocessor";
+import ProtocolIdProcessor from "./Preprocessor/Client/ProtocolIdProcessor";
+import UCS2Preprocessor from "./Preprocessor/Client/UCS2Preprocessor";
+import ProtocolId2DigitProcessor from "./Preprocessor/Client/ProtocolId-2Digit-Processor";
+import ProtocolId3DigitProcessor from "./Preprocessor/Client/ProtocolId-3Digit-Processor";
+import ProtocolId4DigitProcessor from "./Preprocessor/Client/ProtocolId-4Digit-Processor";
 
 export default class ProcessorManager {
 	static preprocessors: PduProcessor[];
@@ -38,7 +43,18 @@ export default class ProcessorManager {
 			new DestinationEnumeratorProcessor(Center.name),
 			new SourceEnumeratorProcessor(Center.name),
 			new DeliveryReceiptRequestProcessor(Client.name),
-			new LongSmsProcessor(Client.name)
+			new LongSmsProcessor(Client.name),
+			new LongSmsProcessor(Center.name),
+			new ProtocolIdProcessor(Client.name),
+			new ProtocolIdProcessor(Center.name),
+			new UCS2Preprocessor(Client.name),
+			new UCS2Preprocessor(Center.name),
+			new ProtocolId2DigitProcessor(Client.name),
+			new ProtocolId2DigitProcessor(Center.name),
+			new ProtocolId3DigitProcessor(Client.name),
+			new ProtocolId3DigitProcessor(Center.name),
+			new ProtocolId4DigitProcessor(Client.name),
+			new ProtocolId4DigitProcessor(Center.name),
 		];
 	}
 
