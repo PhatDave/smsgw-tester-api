@@ -23,7 +23,7 @@ function cleanup(): void {
 	process.exit(0);
 }
 
-process.on('exit', cleanup);
-process.on('SIGINT', cleanup);
-process.on('SIGUSR1', cleanup);
-process.on('SIGUSR2', cleanup);
+// process.on('exit', cleanup);
+// process.on('SIGINT', cleanup);
+// process.on('SIGUSR1', cleanup);
+// process.on('SIGUSR2', cleanup);
