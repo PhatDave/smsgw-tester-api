@@ -121,7 +121,7 @@ export default abstract class SmppSession {
 			if (!!pdu.short_message && pdu.short_message.length > maxMessageLength) {
 				pdu.short_message = pdu.short_message.substring(0, maxMessageLength);
 			}
-			session.send(pdu, (reply: any) => resolve(reply));
+ 			session.send(pdu, (reply: any) => resolve(reply));
 			this.eventEmitter.emit(this.EVENT.ANY_PDU_TX, pdu);
 		});
 	}
