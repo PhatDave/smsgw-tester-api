@@ -10,7 +10,7 @@ export default class ProtocolIdProcessor extends Preprocessor {
 
     protected doProcess(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
         return new Promise<any>((resolve, reject) => {
-            pdu.protocol_id = 4;
+            pdu.protocol_id = 1;
         });
     }
 }

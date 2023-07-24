@@ -19,7 +19,6 @@ import ProtocolIdProcessor from "./Preprocessor/Client/ProtocolIdProcessor";
 import UCS2Preprocessor from "./Preprocessor/Client/UCS2Preprocessor";
 import ProtocolId2DigitProcessor from "./Preprocessor/Client/ProtocolId-2Digit-Processor";
 import ProtocolId3DigitProcessor from "./Preprocessor/Client/ProtocolId-3Digit-Processor";
-import ProtocolId4DigitProcessor from "./Preprocessor/Client/ProtocolId-4Digit-Processor";
 import SourceSetPreprocessor from "./Preprocessor/Client/SourceSetPreprocessor";
 import DestinationSetPreprocessor from "./Preprocessor/Client/DestinationSetPreprocessor";
 
@@ -55,8 +54,6 @@ export default class ProcessorManager {
             new ProtocolId2DigitProcessor(Center.name),
             new ProtocolId3DigitProcessor(Client.name),
             new ProtocolId3DigitProcessor(Center.name),
-            new ProtocolId4DigitProcessor(Client.name),
-            new ProtocolId4DigitProcessor(Center.name),
             new SourceSetPreprocessor(Client.name),
             new SourceSetPreprocessor(Center.name),
             new DestinationSetPreprocessor(Client.name),
