@@ -70,10 +70,37 @@ With this preprocessor enabled the messages body is chopped up into segments bas
 
 **With this preprocessor disabled any message whose body exceeds the maximum smpp message size is truncated to size**.
 
+#### Protocol ID (+2/3 Digit Versions) (1.2)
+
+This processor sets the protocol_id field to a value.
+The basic one (ProtocolIdProcessor) sets the value to 1, 2Digit version to 16 and 3Digit version to 128.
+
+#### Source/Destination Set Processor
+
+Generates X random numbers that are then used for sending Y messages.
+The interface with this processor is somewhat specific: To specify the amount of msisdns generated prepend "arg:X;" to the message body.
+Example: message "arg:100;test123" generates 100 msisdns and sends messages with the body of "test123".
+The point of this processor is to generate a set of msisdns to use with a greater number of messages.
+For example sending 100k messages from 100 msisdns (effectively sending 100 messages per msisdn) to simulate 100 users.
+Note, the picked msisdn per message is random (from the generated set).
+
 ### Center Preprocessors
 
-None as of 1.0
+#### Destination & Source Enumerator (1.2)
 
+Same as the Client version.
+
+#### Long SMS (1.2)
+
+Same as the Client version.
+
+#### Protocol ID (+2/3 Digit Versions) (1.2)
+
+Same as the Client version.
+
+#### Source/Destination Set Processor (1.2)
+
+Same as the Client version.
 
 ### Client Postprocessors
 
