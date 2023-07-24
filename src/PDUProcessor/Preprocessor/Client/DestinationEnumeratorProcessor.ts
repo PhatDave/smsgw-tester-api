@@ -3,21 +3,21 @@ import Preprocessor from "../Preprocessor";
 
 export default class DestinationEnumeratorProcessor extends Preprocessor {
     applicableCommands: string[] = ['submit_sm', 'deliver_sm'];
-	private iterator: number = 0;
+    private iterator: number = 0;
 
-	constructor(type: string) {
-		super(type);
-	}
+    constructor(type: string) {
+        super(type);
+    }
 
-	protected doProcess(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
-		return new Promise<any>((resolve, reject) => {
-			if (!!pdu.destination_addr) {
-				pdu.destination_addr = pdu.destination_addr + this.padLeft(String(this.iterator++), '0', 5);
-			}
-		});
-	}
+    protected doProcess(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
+        return new Promise<any>((resolve, reject) => {
+            if (!!pdu.destination_addr) {
+                pdu.destination_addr = pdu.destination_addr + this.padLeft(String(this.iterator++), '0', 5);
+            }
+        });
+    }
 
-	private padLeft(str: string, pad: string, length: number): string {
-		return (new Array(length + 1).join(pad) + str).slice(-length);
-	}
+    private padLeft(str: string, pad: string, length: number): string {
+        return (new Array(length + 1).join(pad) + str).slice(-length);
+    }
 }

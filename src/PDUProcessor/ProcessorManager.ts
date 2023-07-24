@@ -12,15 +12,15 @@ import DeliverSmReplyProcessor from "./Postprocessor/Client/DeliverSmReplyProces
 import Postprocessor from "./Postprocessor/Postprocessor";
 import DeliveryReceiptRequestProcessor from "./Preprocessor/Client/DeliveryReceiptRequestProcessor";
 import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnumeratorProcessor";
+import DestinationSetPreprocessor from "./Preprocessor/Client/DestinationSetPreprocessor";
 import LongSmsProcessor from "./Preprocessor/Client/LongSmsProcessor";
-import SourceEnumeratorProcessor from "./Preprocessor/Client/SourceEnumeratorProcessor";
-import Preprocessor from "./Preprocessor/Preprocessor";
-import ProtocolIdProcessor from "./Preprocessor/Client/ProtocolIdProcessor";
-import UCS2Preprocessor from "./Preprocessor/Client/UCS2Preprocessor";
 import ProtocolId2DigitProcessor from "./Preprocessor/Client/ProtocolId-2Digit-Processor";
 import ProtocolId3DigitProcessor from "./Preprocessor/Client/ProtocolId-3Digit-Processor";
+import ProtocolIdProcessor from "./Preprocessor/Client/ProtocolIdProcessor";
+import SourceEnumeratorProcessor from "./Preprocessor/Client/SourceEnumeratorProcessor";
 import SourceSetPreprocessor from "./Preprocessor/Client/SourceSetPreprocessor";
-import DestinationSetPreprocessor from "./Preprocessor/Client/DestinationSetPreprocessor";
+import UCS2Preprocessor from "./Preprocessor/Client/UCS2Preprocessor";
+import Preprocessor from "./Preprocessor/Preprocessor";
 
 export default class ProcessorManager {
     static preprocessors: PduProcessor[];

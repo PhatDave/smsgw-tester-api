@@ -1,6 +1,6 @@
+import {PDU} from "../../../CommonObjects";
 import SmppSession from "../../../SmppSession";
 import Preprocessor from "../Preprocessor";
-import {PDU} from "../../../CommonObjects";
 
 export default class SourceSetPreprocessor extends Preprocessor {
     applicableCommands: string[] = ['submit_sm', 'deliver_sm'];

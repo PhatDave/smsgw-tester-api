@@ -14,199 +14,199 @@ const smpp = require("smpp");
 const PORT_RELISTEN_DELAY: number = Number(process.env.PORT_RELISTEN_DELAY) || 500;
 
 export default class Center extends SmppSession {
-	readonly STATUSES: string[] = [
-		"PORT BUSY",
-		"WAITING CONNECTION",
-		"CONNECTING",
-		"CONNECTED",
-		"BUSY"
-	];
-	_username: string;
-	_password: string;
-	_id: number;
-	_status: string = this.STATUSES[0];
-	port: number;
+    readonly STATUSES: string[] = [
+        "PORT BUSY",
+        "WAITING CONNECTION",
+        "CONNECTING",
+        "CONNECTED",
+        "BUSY"
+    ];
+    _username: string;
+    _password: string;
+    _id: number;
+    _status: string = this.STATUSES[0];
+    port: number;
 
-	readonly logger: Logger;
-	pendingSessions: any[] = [];
-	sessions: any[] = [];
-	private nextSession: number = 0;
-	private server: any;
+    readonly logger: Logger;
+    pendingSessions: any[] = [];
+    sessions: any[] = [];
+    private nextSession: number = 0;
+    private server: any;
 
-	constructor(id: number, port: number, username: string, password: string) {
-		super();
-		this._id = id;
-		this._username = username;
-		this._password = password;
-		this.port = port;
+    constructor(id: number, port: number, username: string, password: string) {
+        super();
+        this._id = id;
+        this._username = username;
+        this._password = password;
+        this.port = port;
 
-		this._defaultSingleJob = Job.createEmptySingle('deliver_sm');
-		this._defaultMultipleJob = Job.createEmptyMultiple('deliver_sm');
+        this._defaultSingleJob = Job.createEmptySingle('deliver_sm');
+        this._defaultMultipleJob = Job.createEmptyMultiple('deliver_sm');
 
-		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(SubmitSmReplyProcessor.name));
-		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(BindTranscieverReplyProcessor.name));
-		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(EnquireLinkReplyProcessor.name));
+        ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(SubmitSmReplyProcessor.name));
+        ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(BindTranscieverReplyProcessor.name));
+        ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(EnquireLinkReplyProcessor.name));
 
-		this.logger = new Logger(`Center-${id}`);
+        this.logger = new Logger(`Center-${id}`);
 
-		this.initialize();
-	}
+        this.initialize();
+    }
 
-	_defaultSingleJob: Job;
+    _defaultSingleJob: Job;
 
-	get defaultSingleJob(): Job {
-		return this._defaultSingleJob;
-	}
+    get defaultSingleJob(): Job {
+        return this._defaultSingleJob;
+    }
 
-	set defaultSingleJob(job: Job) {
-		if (job.pdu && !job.pdu.command) {
-			job.pdu.command = 'deliver_sm';
-		}
-		super.defaultSingleJob = job;
-	}
+    set defaultSingleJob(job: Job) {
+        if (job.pdu && !job.pdu.command) {
+            job.pdu.command = 'deliver_sm';
+        }
+        super.defaultSingleJob = job;
+    }
 
-	_defaultMultipleJob: Job;
+    _defaultMultipleJob: Job;
 
-	get defaultMultipleJob(): Job {
-		return this._defaultMultipleJob;
-	}
+    get defaultMultipleJob(): Job {
+        return this._defaultMultipleJob;
+    }
 
-	set defaultMultipleJob(job: Job) {
-		if (job.pdu && !job.pdu.command) {
-			job.pdu.command = 'deliver_sm';
-		}
-		super.defaultMultipleJob = job;
-	}
+    set defaultMultipleJob(job: Job) {
+        if (job.pdu && !job.pdu.command) {
+            job.pdu.command = 'deliver_sm';
+        }
+        super.defaultMultipleJob = job;
+    }
 
-	sendPdu(pdu: PDU, force?: boolean): Promise<object> {
-		return new Promise((resolve, reject) => {
-			if (!force) {
-				this.validateSessions(reject);
-			}
-			let pduCopy = new smpp.PDU(pdu.command, {...pdu});
-			let session = this.getNextSession();
-			this.processors.Preprocessor.forEach((processor: PduProcessor) => processor.processPdu(session, pduCopy, this));
-			this.logger.log5(`Center-${this.id} sending PDU: ${JSON.stringify(pduCopy)}`);
-			this.doSendPdu(pduCopy, session).then((replyPdu: any) => {
-				resolve(replyPdu);
-			});
-		});
-	}
+    sendPdu(pdu: PDU, force?: boolean): Promise<object> {
+        return new Promise((resolve, reject) => {
+            if (!force) {
+                this.validateSessions(reject);
+            }
+            let pduCopy = new smpp.PDU(pdu.command, {...pdu});
+            let session = this.getNextSession();
+            this.processors.Preprocessor.forEach((processor: PduProcessor) => processor.processPdu(session, pduCopy, this));
+            this.logger.log5(`Center-${this.id} sending PDU: ${JSON.stringify(pduCopy)}`);
+            this.doSendPdu(pduCopy, session).then((replyPdu: any) => {
+                resolve(replyPdu);
+            });
+        });
+    }
 
-	sendMultiple(job: Job): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.validateSessions(reject);
-			if (!job.count || !job.perSecond) {
-				reject(`Center-${this.id} sendMultiple failed: invalid job, missing fields`);
-			}
-			this.logger.log1(`Center-${this.id} sending multiple messages: ${JSON.stringify(job)}`);
+    sendMultiple(job: Job): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.validateSessions(reject);
+            if (!job.count || !job.perSecond) {
+                reject(`Center-${this.id} sendMultiple failed: invalid job, missing fields`);
+            }
+            this.logger.log1(`Center-${this.id} sending multiple messages: ${JSON.stringify(job)}`);
 
-			let counter = 0;
-			let previousUpdateCounter = 0;
+            let counter = 0;
+            let previousUpdateCounter = 0;
 
-			this.counterUpdateTimer.setInterval(() => {
-				if (previousUpdateCounter !== counter) {
-					this.eventEmitter.emit(this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
-					previousUpdateCounter = counter;
-				}
-			}, '', `${this.MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
+            this.counterUpdateTimer.setInterval(() => {
+                if (previousUpdateCounter !== counter) {
+                    this.eventEmitter.emit(this.EVENT.MESSAGE_SEND_COUNTER_UPDATE_EVENT, counter);
+                    previousUpdateCounter = counter;
+                }
+            }, '', `${this.MESSAGE_SEND_UPDATE_DELAY / 1000} s`);
 
-			let count = job.count || 1;
-			let interval = 1 / (job.perSecond || 1);
-			this.setStatus(4);
-			this.sendTimer.setInterval(() => {
-				if (count > 0 && counter >= count) {
-					this.cancelSendInterval();
-				} else {
-					this.sendPdu(job.pdu, true);
-					counter++;
-				}
-			}, '', `${interval} s`);
-			resolve();
-		});
-	}
+            let count = job.count || 1;
+            let interval = 1 / (job.perSecond || 1);
+            this.setStatus(4);
+            this.sendTimer.setInterval(() => {
+                if (count > 0 && counter >= count) {
+                    this.cancelSendInterval();
+                } else {
+                    this.sendPdu(job.pdu, true);
+                    counter++;
+                }
+            }, '', `${interval} s`);
+            resolve();
+        });
+    }
 
-	initialize(): void {
-		this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
-		this.server.on('error', this.eventServerError.bind(this));
-		this.doListen();
-		this.setStatus(1);
-	}
+    initialize(): void {
+        this.server = smpp.createServer({}, this.eventSessionConnected.bind(this));
+        this.server.on('error', this.eventServerError.bind(this));
+        this.doListen();
+        this.setStatus(1);
+    }
 
-	close(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.logger.log1(`Center-${this.id} closing active connections`);
-			this.sessions.forEach((session: any) => {
-				session.close();
-			});
-			this.setStatus(1);
-			resolve();
-		});
-	}
+    close(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.logger.log1(`Center-${this.id} closing active connections`);
+            this.sessions.forEach((session: any) => {
+                session.close();
+            });
+            this.setStatus(1);
+            resolve();
+        });
+    }
 
-	destroy(): void {
-		this.server.close();
-	}
+    destroy(): void {
+        this.server.close();
+    }
 
-	postSerialize(obj: any): object {
-		obj.port = this.port;
-		return obj;
-	}
+    postSerialize(obj: any): object {
+        obj.port = this.port;
+        return obj;
+    }
 
-	updateStatus(): void {
-		if (this.sessions.length > 0) {
-			this.setStatus(3);
-		} else if (this.pendingSessions.length > 0) {
-			this.setStatus(2);
-		} else {
-			this.setStatus(1);
-		}
-	}
+    updateStatus(): void {
+        if (this.sessions.length > 0) {
+            this.setStatus(3);
+        } else if (this.pendingSessions.length > 0) {
+            this.setStatus(2);
+        } else {
+            this.setStatus(1);
+        }
+    }
 
-	private doListen(): void {
-		this.server.listen(this.port);
-	}
+    private doListen(): void {
+        this.server.listen(this.port);
+    }
 
-	private validateSessions(reject: (reason?: any) => void) {
-		if (this.sessions.length === 0) {
-			reject(`No clients connected`);
-		}
-	}
+    private validateSessions(reject: (reason?: any) => void) {
+        if (this.sessions.length === 0) {
+            reject(`No clients connected`);
+        }
+    }
 
-	private getNextSession(): any {
-		if (this.sessions.length === 0) {
-			return null;
-		}
-		let session = this.sessions[this.nextSession];
-		this.nextSession = (this.nextSession + 1) % this.sessions.length;
-		return session;
-	}
+    private getNextSession(): any {
+        if (this.sessions.length === 0) {
+            return null;
+        }
+        let session = this.sessions[this.nextSession];
+        this.nextSession = (this.nextSession + 1) % this.sessions.length;
+        return session;
+    }
 
-	private eventSessionConnected(session: any): void {
-		this.logger.log1(`A client connected to center-${this.id}`);
-		this.pendingSessions.push(session);
-		session.on('close', this.eventSessionClose.bind(this, session));
-		session.on('error', this.eventSessionError.bind(this, session));
-		session.on('pdu', this.eventAnyPdu.bind(this, session));
-		this.updateStatus();
-		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
-	}
+    private eventSessionConnected(session: any): void {
+        this.logger.log1(`A client connected to center-${this.id}`);
+        this.pendingSessions.push(session);
+        session.on('close', this.eventSessionClose.bind(this, session));
+        session.on('error', this.eventSessionError.bind(this, session));
+        session.on('pdu', this.eventAnyPdu.bind(this, session));
+        this.updateStatus();
+        this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+    }
 
-	private eventSessionError(session: any): void {
-		this.logger.log1(`A client encountered an error on center-${this.id}`);
-	}
+    private eventSessionError(session: any): void {
+        this.logger.log1(`A client encountered an error on center-${this.id}`);
+    }
 
-	private eventServerError(): void {
-		this.logger.log1(`Center tried listening on port which is already in use, retrying in ${PORT_RELISTEN_DELAY}`);
-		this.setStatus(0);
-		setTimeout(this.doListen.bind(this), PORT_RELISTEN_DELAY);
-	}
+    private eventServerError(): void {
+        this.logger.log1(`Center tried listening on port which is already in use, retrying in ${PORT_RELISTEN_DELAY}`);
+        this.setStatus(0);
+        setTimeout(this.doListen.bind(this), PORT_RELISTEN_DELAY);
+    }
 
-	private eventSessionClose(session: any): void {
-		this.logger.log1(`A client disconnected from center-${this.id}`);
-		this.sessions = this.sessions.filter((s: any) => s !== session);
-		this.nextSession = 0;
-		this.pendingSessions = this.pendingSessions.filter((s: any) => s !== session);
-		this.updateStatus();
-	}
+    private eventSessionClose(session: any): void {
+        this.logger.log1(`A client disconnected from center-${this.id}`);
+        this.sessions = this.sessions.filter((s: any) => s !== session);
+        this.nextSession = 0;
+        this.pendingSessions = this.pendingSessions.filter((s: any) => s !== session);
+        this.updateStatus();
+    }
 }

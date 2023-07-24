@@ -17,10 +17,10 @@ let wss: WSServer = new WSServer([clientManager, centerManager]);
 let httpServer: HttpServer = new HttpServer(clientManager, centerManager);
 
 function cleanup(): void {
-	logger.log1("Cleaning up...");
-	clientManager.cleanup();
-	centerManager.cleanup();
-	process.exit(0);
+    logger.log1("Cleaning up...");
+    clientManager.cleanup();
+    centerManager.cleanup();
+    process.exit(0);
 }
 
 process.on('exit', cleanup);
