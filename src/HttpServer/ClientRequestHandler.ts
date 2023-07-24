@@ -31,16 +31,16 @@ export default class ClientRequestHandler extends RequestHandler {
 
 	doAddProcessor(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			let processor: PduProcessor = ProcessorManager.getProcessor(req.body.name);
-			ProcessorManager.attachProcessor(session, processor);
+			let processors: PduProcessor[] = ProcessorManager.getProcessors(req.body.name);
+			ProcessorManager.attachProcessors(session, processors);
 			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}
 
 	doRemoveProcessor(req: any, res: any): void {
 		this.sessionManager.getSession(req.params.id).then((session: SmppSession) => {
-			let processor: PduProcessor = ProcessorManager.getProcessor(req.body.name);
-			ProcessorManager.detachProcessor(session, processor);
+			let processors: PduProcessor[] = ProcessorManager.getProcessors(req.body.name);
+			ProcessorManager.detachProcessors(session, processors);
 			res.send(session.serialize());
 		}, this.handleSessionNotFound.bind(this, req, res));
 	}

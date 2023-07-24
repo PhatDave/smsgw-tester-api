@@ -2,16 +2,16 @@ import SmppSession from "../../../SmppSession";
 import Postprocessor from "../Postprocessor";
 
 export default class EnquireLinkReplyProcessor extends Postprocessor {
+	applicableCommands: string[] = ['enquire_link'];
+
 	constructor(type: string) {
 		super(type);
 	}
 
-	processPdu(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
+	protected doProcess(session: any, pdu: any, entity?: SmppSession | undefined): Promise<any> {
 		return new Promise((resolve, reject) => {
-			if (!!pdu.command && pdu.command === 'enquire_link') {
-				entity?.doSendPdu(pdu.response(), session);
-				resolve(pdu);
-			}
+			entity?.doSendPdu(pdu.response(), session);
+			resolve(pdu);
 		});
 	}
 }

@@ -74,13 +74,12 @@ export default abstract class SessionManager {
 
 					let loadedProcessors: PduProcessor[] = session.preprocessors.concat(session.postprocessors);
 					sessionObj.appliedProcessors.forEach((processor: PduProcessor) => {
-						if (!loadedProcessors.find(p => p.name === processor.name)) {
-							ProcessorManager.detachProcessor(sessionObj, processor);
-						}
+						let processorsToDetach: PduProcessor[] = loadedProcessors.filter(p => p.name === processor.name);
+						ProcessorManager.detachProcessors(sessionObj, processorsToDetach);
 					});
 					loadedProcessors.forEach((processor: PduProcessor) => {
 						if (!sessionObj.appliedProcessors.find(p => p.name === processor.name)) {
-							ProcessorManager.attachProcessor(sessionObj, ProcessorManager.getProcessor(processor.name));
+							ProcessorManager.attachProcessors(sessionObj, ProcessorManager.getProcessors(processor.name));
 						}
 					});
 				});

@@ -15,94 +15,117 @@ import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnu
 import LongSmsProcessor from "./Preprocessor/Client/LongSmsProcessor";
 import SourceEnumeratorProcessor from "./Preprocessor/Client/SourceEnumeratorProcessor";
 import Preprocessor from "./Preprocessor/Preprocessor";
+import ProtocolIdProcessor from "./Preprocessor/Client/ProtocolIdProcessor";
+import UCS2Preprocessor from "./Preprocessor/Client/UCS2Preprocessor";
+import ProtocolId2DigitProcessor from "./Preprocessor/Client/ProtocolId-2Digit-Processor";
+import ProtocolId3DigitProcessor from "./Preprocessor/Client/ProtocolId-3Digit-Processor";
+import ProtocolId4DigitProcessor from "./Preprocessor/Client/ProtocolId-4Digit-Processor";
+import SourceSetPreprocessor from "./Preprocessor/Client/SourceSetPreprocessor";
+import DestinationSetPreprocessor from "./Preprocessor/Client/DestinationSetPreprocessor";
 
 export default class ProcessorManager {
-	static preprocessors: PduProcessor[];
-	static postprocessors: PduProcessor[];
-	private static readonly logger: Logger = new Logger(this.name);
+    static preprocessors: PduProcessor[];
+    static postprocessors: PduProcessor[];
+    private static readonly logger: Logger = new Logger(this.name);
 
-	constructor() {
-		// This is an IDIOTIC solution, but it works
-		// Try running eb22a43 to find out what's wrong with the previous approach
-		ProcessorManager.postprocessors = [
-			new EnquireLinkReplyProcessor(Center.name),
-			new DeliverSmReplyProcessor(Client.name),
-			new SubmitSmReplyProcessor(Center.name),
-			new BindTranscieverReplyProcessor(Center.name),
-			new EchoPduProcessor(Center.name),
-			new DeliveryReceiptProcessor(Center.name)
-		];
-		ProcessorManager.preprocessors = [
-			new DestinationEnumeratorProcessor(Client.name),
-			new SourceEnumeratorProcessor(Client.name),
-			new DeliveryReceiptRequestProcessor(Client.name),
-			new LongSmsProcessor(Client.name)
-		];
-	}
+    constructor() {
+        // This is an IDIOTIC solution, but it works
+        // Try running eb22a43 to find out what's wrong with the previous approach
+        ProcessorManager.postprocessors = [
+            new EnquireLinkReplyProcessor(Center.name),
+            new DeliverSmReplyProcessor(Client.name),
+            new SubmitSmReplyProcessor(Center.name),
+            new BindTranscieverReplyProcessor(Center.name),
+            new EchoPduProcessor(Center.name),
+            new DeliveryReceiptProcessor(Center.name)
+        ];
+        ProcessorManager.preprocessors = [
+            new DestinationEnumeratorProcessor(Client.name),
+            new SourceEnumeratorProcessor(Client.name),
+            new DestinationEnumeratorProcessor(Center.name),
+            new SourceEnumeratorProcessor(Center.name),
+            new DeliveryReceiptRequestProcessor(Client.name),
+            new LongSmsProcessor(Client.name),
+            new LongSmsProcessor(Center.name),
+            new ProtocolIdProcessor(Client.name),
+            new ProtocolIdProcessor(Center.name),
+            new UCS2Preprocessor(Client.name),
+            new UCS2Preprocessor(Center.name),
+            new ProtocolId2DigitProcessor(Client.name),
+            new ProtocolId2DigitProcessor(Center.name),
+            new ProtocolId3DigitProcessor(Client.name),
+            new ProtocolId3DigitProcessor(Center.name),
+            new ProtocolId4DigitProcessor(Client.name),
+            new ProtocolId4DigitProcessor(Center.name),
+            new SourceSetPreprocessor(Client.name),
+            new SourceSetPreprocessor(Center.name),
+            new DestinationSetPreprocessor(Client.name),
+            new DestinationSetPreprocessor(Center.name)
+        ];
+    }
 
-	static get processors(): PduProcessor[] {
-		return this.preprocessors.concat(this.postprocessors);
-	}
+    static get processors(): PduProcessor[] {
+        return this.preprocessors.concat(this.postprocessors);
+    }
 
-	static getProcessor(name: string): PduProcessor {
-		this.logger.log1(`Looking for processor with name ${name}...`);
-		let pduProcessor: PduProcessor | undefined = this.processors.find((processor: PduProcessor) => processor.name === name);
-		if (pduProcessor) {
-			this.logger.log1(`Found processor with name ${name}`);
-			return pduProcessor;
-		} else {
-			this.logger.log1(`Processor with name ${name} not found`);
-			return this.processors[0];
-		}
-	}
+    static getProcessors(name: string): PduProcessor[] {
+        this.logger.log1(`Looking for processor with name ${name}...`);
+        let pduProcessors: PduProcessor[] = this.processors.filter((processor: PduProcessor) => processor.name === name);
+        this.logger.log1(`Found ${pduProcessors.length} processor(s) with name ${name}`);
+        return pduProcessors;
+    }
 
-	static attachProcessor(session: SmppSession, processor: PduProcessor): void {
-		this.logger.log1(`Trying to attach preprocessor ${processor.name} to session ${session.constructor.name}-${session.id}`);
-		if (this.areCompatible(session, processor)) {
-			// This could be done a little better but this is OK for now
-			switch (processor.type) {
-				case Preprocessor.name:
-					session.attachPreprocessor(processor);
-					break;
-				case Postprocessor.name:
-					session.attachPostprocessor(processor);
-					break;
-				default:
-					this.logger.log1(`Processor ${processor.name} is not a preprocessor or a postprocessor`);
-					break;
-			}
-		}
-	}
+    static attachProcessors(session: SmppSession, processors: PduProcessor[]): void {
+        this.logger.log1(`Trying to attach processor ${processors.toString()} to session ${session.constructor.name}-${session.id}`);
+        for (const processor of processors) {
+            if (this.areCompatible(session, processor)) {
+                // This could be done a little better but this is OK for now
+                switch (processor.type) {
+                    case Preprocessor.name:
+                        session.attachPreprocessor(processor);
+                        break;
+                    case Postprocessor.name:
+                        session.attachPostprocessor(processor);
+                        break;
+                    default:
+                        this.logger.log1(`Processor ${processor.name} is not a preprocessor or a postprocessor`);
+                        break;
+                }
+            }
+        }
+    }
 
-	static detachProcessor(session: SmppSession, processor: PduProcessor): void {
-		this.logger.log1(`Trying to detach processor ${processor.name} from session ${session.constructor.name}-${session.id}`);
-		switch (processor.type) {
-			case Preprocessor.name:
-				session.detachPreprocessor(processor);
-				break;
-			case Postprocessor.name:
-				session.detachPostprocessor(processor);
-				break;
-			default:
-				this.logger.log1(`Processor ${processor.name} is not a preprocessor or a postprocessor`);
-				break;
-		}
-	}
+    static detachProcessors(session: SmppSession, processors: PduProcessor[]): void {
+        this.logger.log1(`Trying to detach processors ${processors.toString()} from session ${session.constructor.name}-${session.id}`);
+        for (const processor of processors) {
+            switch (processor.type) {
+                case Preprocessor.name:
+                    session.detachPreprocessor(processor);
+                    break;
+                case Postprocessor.name:
+                    session.detachPostprocessor(processor);
+                    break;
+                default:
+                    this.logger.log1(`Processor ${processor.name} is not a preprocessor or a postprocessor`);
+                    break;
+            }
+        }
+    }
 
-	static areCompatible(session: SmppSession, processor: PduProcessor): boolean {
-		this.logger.log1(`Checking compatibility between session ${session.constructor.name}-${session.id} and processor ${processor.name}`);
-		return session.constructor.name === processor.sessionType;
-	}
+    static areCompatible(session: SmppSession, processor: PduProcessor): boolean {
+        this.logger.log1(`Checking compatibility between session ${session.constructor.name}-${session.id} and processor ${processor.name}`);
+        return session.constructor.name === processor.sessionType;
+    }
 
-	static getProcessorsForType(type: string): PduProcessor[] {
-		return this.processors.filter((processor: PduProcessor) => processor.sessionType === type);
-	}
+    static getProcessorsForType(type: string): PduProcessor[] {
+        return this.processors.filter((processor: PduProcessor) => processor.sessionType === type);
+    }
 
-	static getPreprocessorsForType(type: string): PduProcessor[] {
-		return this.preprocessors.filter((processor: PduProcessor) => processor.sessionType === type);
-	}
+    static getPreprocessorsForType(type: string): PduProcessor[] {
+        return this.preprocessors.filter((processor: PduProcessor) => processor.sessionType === type);
+    }
 
-	static getPostprocessorsForType(type: string): PduProcessor[] {
-		return this.postprocessors.filter((processor: PduProcessor) => processor.sessionType === type);
-	}
+    static getPostprocessorsForType(type: string): PduProcessor[] {
+        return this.postprocessors.filter((processor: PduProcessor) => processor.sessionType === type);
+    }
 }

@@ -42,7 +42,7 @@ export default class Client extends SmppSession {
 		this._defaultSingleJob = Job.createEmptySingle('submit_sm');
 		this._defaultMultipleJob = Job.createEmptyMultiple('submit_sm');
 
-		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(DeliverSmReplyProcessor.name));
+		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(DeliverSmReplyProcessor.name));
 
 		this.logger = new Logger(`Client-${id}`);
 	}
@@ -116,21 +116,9 @@ export default class Client extends SmppSession {
 		});
 	}
 
-	serialize(): object {
-		// TODO: Generify this further by moving it to smpp session and creating a... "postSerialize" that is abstract
-		return {
-			id: this._id,
-			url: this.url,
-			username: this._username,
-			password: this._password,
-			status: this._status,
-			defaultSingleJob: this._defaultSingleJob.serialize(),
-			defaultMultipleJob: this._defaultMultipleJob.serialize(),
-			preprocessors: this.processors.Preprocessor.map((p: PduProcessor) => p.serialize()),
-			postprocessors: this.processors.Postprocessor.map((p: PduProcessor) => p.serialize()),
-			availablePreprocessors: ProcessorManager.getPreprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
-			availablePostprocessors: ProcessorManager.getPostprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
-		};
+	postSerialize(obj: any): object {
+		obj.url = this.url;
+		return obj;
 	}
 
 	close(): Promise<void> {

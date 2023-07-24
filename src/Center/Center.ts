@@ -43,9 +43,9 @@ export default class Center extends SmppSession {
 		this._defaultSingleJob = Job.createEmptySingle('deliver_sm');
 		this._defaultMultipleJob = Job.createEmptyMultiple('deliver_sm');
 
-		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(SubmitSmReplyProcessor.name));
-		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(BindTranscieverReplyProcessor.name));
-		ProcessorManager.attachProcessor(this, ProcessorManager.getProcessor(EnquireLinkReplyProcessor.name));
+		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(SubmitSmReplyProcessor.name));
+		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(BindTranscieverReplyProcessor.name));
+		ProcessorManager.attachProcessors(this, ProcessorManager.getProcessors(EnquireLinkReplyProcessor.name));
 
 		this.logger = new Logger(`Center-${id}`);
 
@@ -148,20 +148,9 @@ export default class Center extends SmppSession {
 		this.server.close();
 	}
 
-	serialize(): object {
-		return {
-			id: this._id,
-			port: this.port,
-			username: this._username,
-			password: this._password,
-			status: this._status,
-			defaultSingleJob: this._defaultSingleJob.serialize(),
-			defaultMultipleJob: this._defaultMultipleJob.serialize(),
-			preprocessors: this.processors.Preprocessor.map((p: PduProcessor) => p.serialize()),
-			postprocessors: this.processors.Postprocessor.map((p: PduProcessor) => p.serialize()),
-			availablePreprocessors: ProcessorManager.getPreprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
-			availablePostprocessors: ProcessorManager.getPostprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
-		};
+	postSerialize(obj: any): object {
+		obj.port = this.port;
+		return obj;
 	}
 
 	updateStatus(): void {

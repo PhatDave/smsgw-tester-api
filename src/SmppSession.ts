@@ -6,6 +6,7 @@ import PduProcessor from "./PDUProcessor/PduProcessor";
 import Postprocessor from "./PDUProcessor/Postprocessor/Postprocessor";
 import LongSmsProcessor from "./PDUProcessor/Preprocessor/Client/LongSmsProcessor";
 import Preprocessor from "./PDUProcessor/Preprocessor/Preprocessor";
+import ProcessorManager from "./PDUProcessor/ProcessorManager";
 
 const NanoTimer = require("nanotimer");
 const smpp = require("smpp");
@@ -115,11 +116,11 @@ export default abstract class SmppSession {
 
 	doSendPdu(pdu: PDU, session: any): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
-			// let characterSizeBits: number = LongSmsProcessor.getCharacterSizeForEncoding(pdu);
-			// let maxMessageLength: number = LongSmsProcessor.maxMessageSizeBits / characterSizeBits;
-			// if (!!pdu.short_message && pdu.short_message.length > maxMessageLength) {
-			// 	pdu.short_message = pdu.short_message.substring(0, maxMessageLength);
-			// }
+			let characterSizeBits: number = LongSmsProcessor.getCharacterSizeForEncoding(pdu);
+			let maxMessageLength: number = LongSmsProcessor.maxMessageSizeBits / characterSizeBits;
+			if (!!pdu.short_message && pdu.short_message.length > maxMessageLength) {
+				pdu.short_message = pdu.short_message.substring(0, maxMessageLength);
+			}
 			session.send(pdu, (reply: any) => resolve(reply));
 			this.eventEmitter.emit(this.EVENT.ANY_PDU_TX, pdu);
 		});
@@ -149,7 +150,23 @@ export default abstract class SmppSession {
 
 	abstract close(): Promise<void>;
 
-	abstract serialize(): object;
+	serialize(): object {
+		let obj = {
+			id: this._id,
+			username: this._username,
+			password: this._password,
+			status: this._status,
+			defaultSingleJob: this._defaultSingleJob.serialize(),
+			defaultMultipleJob: this._defaultMultipleJob.serialize(),
+			preprocessors: this.processors.Preprocessor.map((p: PduProcessor) => p.serialize()),
+			postprocessors: this.processors.Postprocessor.map((p: PduProcessor) => p.serialize()),
+			availablePreprocessors: ProcessorManager.getPreprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
+			availablePostprocessors: ProcessorManager.getPostprocessorsForType(this.constructor.name).map((p: PduProcessor) => p.serialize()),
+		};
+		return this.postSerialize(obj);
+	}
+
+	abstract postSerialize(obj: object): object;
 
 	on(event: string, callback: (...args: any[]) => void): void {
 		this.eventEmitter.on(event, callback);
@@ -210,9 +227,11 @@ export default abstract class SmppSession {
 	}
 
 	private detachProcessor(processor: PduProcessor, array: PduProcessor[]): void {
-		array.splice(array.indexOf(processor), 1);
-		this.logger.log1(`Detaching PDU processor: ${processor.constructor.name}-${this.id}, now active: ${array.length} processors`);
-		this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+		if (array.indexOf(processor) >= 0) {
+			array.splice(array.indexOf(processor), 1);
+			this.logger.log1(`Detaching PDU processor: ${processor.constructor.name}-${this.id}, now active: ${array.length} processors`);
+			this.eventEmitter.emit(this.EVENT.STATE_CHANGED, this.serialize());
+		}
 	}
 
 	private attachProcessor(processor: PduProcessor, array: PduProcessor[]): void {
