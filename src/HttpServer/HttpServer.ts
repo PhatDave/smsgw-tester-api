@@ -8,6 +8,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const compression = require("compression");
 const zlib = require("zlib");
+const cors = require("cors");
 
 const SERVER_PORT: number = Number(process.env.SERVER_PORT) || 8190;
 
@@ -24,6 +25,7 @@ export default class HttpServer {
 		this.centerRequestHandler = new CenterRequestHandler(centerManager);
 
 		this.app = express();
+		this.app.use(cors());
 		this.app.use(bodyParser.json());
 
 		this.app.use(compression({
