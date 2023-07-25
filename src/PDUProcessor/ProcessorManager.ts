@@ -13,6 +13,7 @@ import Postprocessor from "./Postprocessor/Postprocessor";
 import DeliveryReceiptRequestProcessor from "./Preprocessor/Client/DeliveryReceiptRequestProcessor";
 import DestinationEnumeratorProcessor from "./Preprocessor/Client/DestinationEnumeratorProcessor";
 import DestinationSetPreprocessor from "./Preprocessor/Client/DestinationSetPreprocessor";
+import GSM0338Preprocessor from "./Preprocessor/Client/GSM0338Preprocessor";
 import LongSmsProcessor from "./Preprocessor/Client/LongSmsProcessor";
 import ProtocolId2DigitProcessor from "./Preprocessor/Client/ProtocolId-2Digit-Processor";
 import ProtocolId3DigitProcessor from "./Preprocessor/Client/ProtocolId-3Digit-Processor";
@@ -57,7 +58,9 @@ export default class ProcessorManager {
             new SourceSetPreprocessor(Client.name),
             new SourceSetPreprocessor(Center.name),
             new DestinationSetPreprocessor(Client.name),
-            new DestinationSetPreprocessor(Center.name)
+            new DestinationSetPreprocessor(Center.name),
+            new GSM0338Preprocessor(Client.name),
+            new GSM0338Preprocessor(Center.name)
         ];
     }
 
